@@ -75,38 +75,46 @@ st.subheader("⚡ Energy Over Time")
 energy_chart_type = st.selectbox("Chart Type - Energy", ["Line", "Bar", "Scatter", "Combo"], key="energy")
 
 if aggregation == "Daily":
-    df_agg = df.groupby(df["AC_Timestamp"].dt.date).agg({"Energy_Consumption": "sum"}).reset_index()
-    df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+    df_energy = df.groupby(df["AC_Timestamp"].dt.date).agg({"Energy_Consumption": "sum"}).reset_index()
+    df_energy.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
 elif aggregation == "Weekly":
-    df_agg = df.resample("W", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
-    df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+    df_energy = df.resample("W", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
+    df_energy.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
 else:
-    df_agg = df.resample("M", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
-    df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+    df_energy = df.resample("M", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
+    df_energy.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
 
 if energy_chart_type == "Line":
-    fig = px.line(df_agg, x="Date", y="Energy_Consumption")
+    fig = px.line(df_energy, x="Date", y="Energy_Consumption")
 elif energy_chart_type == "Bar":
-    fig = px.bar(df_agg, x="Date", y="Energy_Consumption")
+    fig = px.bar(df_energy, x="Date", y="Energy_Consumption")
 elif energy_chart_type == "Scatter":
-    fig = px.scatter(df_agg, x="Date", y="Energy_Consumption")
+    fig = px.scatter(df_energy, x="Date", y="Energy_Consumption")
 elif energy_chart_type == "Combo":
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=df_agg["Date"], y=df_agg["Energy_Consumption"], name="Bar"))
-    fig.add_trace(go.Scatter(x=df_agg["Date"], y=df_agg["Energy_Consumption"], mode='lines+markers', name="Line"))
+    fig.add_trace(go.Bar(x=df_energy["Date"], y=df_energy["Energy_Consumption"], name="Bar"))
+    fig.add_trace(go.Scatter(x=df_energy["Date"], y=df_energy["Energy_Consumption"], mode='lines+markers', name="Line"))
 else:
-    fig = px.area(df_agg, x="Date", y="Energy_Consumption")
+    fig = px.area(df_energy, x="Date", y="Energy_Consumption")
 
 st.plotly_chart(fig, use_container_width=True)
 
 # TEMPERATURE DISTRIBUTION
 st.subheader("🌡️ Temperature Distribution")
-temp_chart_type = st.selectbox("Chart Type - Temperature", ["Histogram", "Scatter", "Box"], key="temp")
+temp_chart_type = st.selectbox("Chart Type - Temperature", ["Line", "Bar", "Box"], key="temp")
 
-if temp_chart_type == "Histogram":
-    fig = px.histogram(df, x=temp_col, nbins=20)
-elif temp_chart_type == "Scatter":
-    fig = px.scatter(df, x="AC_Timestamp", y=temp_col)
+if aggregation == "Daily":
+    df_temp = df.groupby(df["AC_Timestamp"].dt.date).agg({temp_col: "mean"}).reset_index()
+    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+elif aggregation == "Weekly":
+    df_temp = df.resample("W", on="AC_Timestamp")[temp_col].mean().reset_index()
+else:
+    df_temp = df.resample("M", on="AC_Timestamp")[temp_col].mean().reset_index()
+
+if temp_chart_type == "Line":
+    fig = px.line(df_temp, x="AC_Timestamp", y=temp_col)
+elif temp_chart_type == "Bar":
+    fig = px.bar(df_temp, x="AC_Timestamp", y=temp_col)
 elif temp_chart_type == "Box":
     fig = px.box(df, y=temp_col)
 
@@ -116,7 +124,14 @@ st.plotly_chart(fig, use_container_width=True)
 st.subheader("💧 Humidity Share")
 humid_chart_type = st.selectbox("Chart Type - Humidity", ["Pie", "Bar", "Scatter"], key="humid")
 
-avg_humidity = df[humid_col].mean()
+if aggregation == "Daily":
+    df_humid = df.groupby(df["AC_Timestamp"].dt.date).agg({humid_col: "mean"}).reset_index()
+elif aggregation == "Weekly":
+    df_humid = df.resample("W", on="AC_Timestamp")[humid_col].mean().reset_index()
+else:
+    df_humid = df.resample("M", on="AC_Timestamp")[humid_col].mean().reset_index()
+
+avg_humidity = df_humid[humid_col].mean()
 
 if humid_chart_type == "Pie":
     fig = px.pie(values=[avg_humidity, 100 - avg_humidity], names=[f"Avg {selected_room} Humidity", "Other"])
