@@ -36,6 +36,8 @@ selected_dates = st.sidebar.date_input(
 room_options = ["LivingRoom", "Kitchen", "Bedroom"]
 selected_room = st.sidebar.selectbox("Select Room", room_options)
 
+aggregation = st.sidebar.radio("Aggregation Level", ["Daily", "Weekly", "Monthly"], index=0)
+
 # Apply date filter
 if isinstance(selected_dates, list) and len(selected_dates) == 2:
     df = df[(df["AC_Timestamp"] >= pd.to_datetime(selected_dates[0])) &
@@ -67,10 +69,22 @@ with kpi3:
 
 st.markdown("---")
 
+# Energy Aggregation Logic
+if aggregation == "Daily":
+    df_agg = df.groupby(df["AC_Timestamp"].dt.date).agg({"Energy_Consumption": "sum"}).reset_index()
+    x_col = "AC_Timestamp"
+    df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+elif aggregation == "Weekly":
+    df_agg = df.resample("W", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
+    df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+else:  # Monthly
+    df_agg = df.resample("M", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
+    df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+
 # Charts
 col1, col2 = st.columns((2,1))
 with col1:
-    fig1 = px.line(df, x="AC_Timestamp", y="Energy_Consumption", title="⚡ Energy Over Time")
+    fig1 = px.line(df_agg, x="Date", y="Energy_Consumption", title=f"⚡ Energy Over Time ({aggregation})")
     fig1.update_layout(plot_bgcolor="#111", paper_bgcolor="#111", font_color="#fff")
     st.plotly_chart(fig1, use_container_width=True)
 
