@@ -68,6 +68,14 @@ bar_chart = bar_df.groupby(["Room", "Month"])["Energy_Consumption"].sum().reset_
 fig_bar = px.bar(bar_chart, x="Month", y="Energy_Consumption", color="Room", barmode="group", labels={"Energy_Consumption": "Total Power (kWh)"})
 st.plotly_chart(fig_bar, use_container_width=True)
 
+# Bar Chart – Power Usage by Room (Weekly)
+st.subheader("📊 Weekly Power Usage by Room")
+bar_df = melted_df.copy()
+bar_df["Week"] = bar_df["Timestamp"].dt.to_period("W").astype(str)
+bar_chart = bar_df.groupby(["Room", "Weekly"])["Energy_Consumption"].sum().reset_index()
+fig_bar = px.bar(bar_chart, x="Weekly", y="Energy_Consumption", color="Room", barmode="group", labels={"Energy_Consumption": "Total Power (kWh)"})
+st.plotly_chart(fig_bar, use_container_width=True)
+
 # Pie Chart – Power % by Room
 st.subheader("🥧 Power Consumption % by Room")
 pie_df = melted_df.groupby("Room")["Energy_Consumption"].sum().reset_index()
@@ -77,3 +85,7 @@ st.plotly_chart(fig_pie, use_container_width=True)
 # Footer
 st.markdown("---")
 st.markdown("Built with ❤️ using Streamlit")
+
+# Debug columns shown in sidebar
+st.sidebar.write("Available columns:", df.columns.tolist())
+
