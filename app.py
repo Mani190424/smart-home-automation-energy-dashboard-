@@ -2,135 +2,67 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from datetime import datetime
 
-# --- Page config ---
-st.set_page_config(page_title="Smart Home Dashboard", layout="wide")
+# Load data
+df = pd.read_csv("processed_with_timestamp.csv", parse_dates=["Timestamp"])
 
-# --- Theme Toggle ---
-theme = st.sidebar.radio("🌗 Select Theme", ["Dark", "Light"], index=0)
-dark_mode = theme == "Dark"
+# Sidebar - Theme & Navigation
+st.sidebar.markdown("### 🎨 Select Theme")
+theme = st.sidebar.radio("Mode", ["Dark", "Light"], index=0)
+st.markdown(f"<style>body {{ background-color: {'#0e1117' if theme == 'Dark' else '#FFFFFF'}; }}</style>", unsafe_allow_html=True)
 
-# --- Custom CSS ---
-if dark_mode:
-    st.markdown("""
-        <style>
-            body, .stApp {
-                background-color: #0e1117;
-                color: #FFFFFF;
-            }
-            .kpi-card {
-                padding: 20px;
-                border-radius: 15px;
-                background-color: #1e1e2f;
-                box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
-                text-align: center;
-            }
-            .kpi-card h3 {
-                color: #6c76ff;
-                font-size: 20px;
-            }
-            .kpi-card p {
-                font-size: 26px;
-                font-weight: bold;
-                color: #ffffff;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-else:
-    st.markdown("""
-        <style>
-            .kpi-card {
-                padding: 20px;
-                border-radius: 15px;
-                background-color: #f0f2f6;
-                box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-                text-align: center;
-            }
-            .kpi-card h3 {
-                color: #2a2a2a;
-                font-size: 20px;
-            }
-            .kpi-card p {
-                font-size: 26px;
-                font-weight: bold;
-                color: #000000;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+st.sidebar.markdown("### 🧭 Navigate")
+page = st.sidebar.selectbox("Navigation", ["🏠 Home", "📊 Room-wise", "📈 Trends", "⚙️ Settings"])
 
-# --- Load Data ---
-@st.cache_data
-def load_data():
-    return pd.read_csv("processed_with_timestamp.csv", parse_dates=["Timestamp"])
+# Sidebar - Filters
+st.sidebar.markdown("### 🔍 Filters")
+start_date = df["Timestamp"].min().date()
+end_date = df["Timestamp"].max().date()
+date_range = st.sidebar.date_input("Select Date Range", [start_date, end_date])
+start_date, end_date = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
+df = df[(df["Timestamp"] >= start_date) & (df["Timestamp"] <= end_date)]
 
-df = load_data()
+# Extract rooms from columns
+room_names = sorted(set(col.split("_")[1] for col in df.columns if "_" in col))
 
-# --- Multi-page Navigation ---
-page = st.sidebar.selectbox("🔀 Navigate", ["🏠 Home", "📊 Room-wise", "📈 Trends", "⚙️ Settings"])
+# Main
+st.title("🏡 Smart Home Energy Dashboard")
 
-# --- Sidebar Filters ---
-st.sidebar.header("🔍 Filters")
-min_date = df["Timestamp"].min()
-max_date = df["Timestamp"].max()
-selected_dates = st.sidebar.date_input("Select Date Range", [min_date, max_date])
-room_list = df["Room"].unique().tolist()
-selected_rooms = st.sidebar.multiselect("Select Room(s)", room_list, default=room_list)
-
-# --- Filtered Data ---
-start_date, end_date = pd.to_datetime(selected_dates[0]), pd.to_datetime(selected_dates[1])
-filtered_df = df[
-    (df["Timestamp"] >= start_date) &
-    (df["Timestamp"] <= end_date) &
-    (df["Room"].isin(selected_rooms))
-]
-
-# --- Export Button ---
-st.sidebar.download_button("📥 Download Filtered CSV", data=filtered_df.to_csv(index=False), file_name="filtered_data.csv")
-
-# --- Home Page ---
 if page == "🏠 Home":
-    st.title("🏠 Smart Home Energy Dashboard")
+    st.subheader("🌡️ Room-wise Temperature & Humidity")
+    for room in room_names:
+        temp_col = f"Temperature_{room}"
+        hum_col = f"Humidity_{room}"
+        if temp_col in df.columns and hum_col in df.columns:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric(f"🌡️ {room} Temp", f"{df[temp_col].mean():.1f}°C", delta=f"{df[temp_col].max() - df[temp_col].min():.1f}°C")
+            with col2:
+                st.metric(f"💧 {room} Humidity", f"{df[hum_col].mean():.1f}%", delta=f"{df[hum_col].max() - df[hum_col].min():.1f}%")
 
-    col1, col2, col3 = st.columns(3)
-    total_energy = filtered_df[filtered_df["Metric"] == "Energy_Consumption"]["Value"].sum()
-    avg_temp = filtered_df[filtered_df["Metric"] == "Temperature"]["Value"].mean()
-    avg_hum = filtered_df[filtered_df["Metric"] == "Humidity"]["Value"].mean()
-
-    with col1:
-        st.markdown(f"<div class='kpi-card'><h3>Total Power</h3><p>{total_energy:.2f} kWh</p></div>", unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"<div class='kpi-card'><h3>Avg Temp</h3><p>{avg_temp:.2f} °C</p></div>", unsafe_allow_html=True)
-    with col3:
-        st.markdown(f"<div class='kpi-card'><h3>Avg Humidity</h3><p>{avg_hum:.2f} %</p></div>", unsafe_allow_html=True)
-
-# --- Room-wise Page ---
 elif page == "📊 Room-wise":
-    st.title("📊 Room-wise Temperature & Humidity")
-    for room in selected_rooms:
-        room_df = filtered_df[filtered_df["Room"] == room]
-        temp = room_df[room_df["Metric"] == "Temperature"]["Value"].mean()
-        hum = room_df[room_df["Metric"] == "Humidity"]["Value"].mean()
+    selected_room = st.selectbox("Select Room", room_names)
+    temp_col = f"Temperature_{selected_room}"
+    hum_col = f"Humidity_{selected_room}"
+    if temp_col in df.columns and hum_col in df.columns:
+        fig1 = px.line(df, x="Timestamp", y=temp_col, title=f"{selected_room} - Temperature Over Time")
+        fig2 = px.line(df, x="Timestamp", y=hum_col, title=f"{selected_room} - Humidity Over Time")
+        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(fig2, use_container_width=True)
 
-        st.markdown(f"<div class='kpi-card'><h3>{room}</h3><p>Temp: {temp:.1f} °C | Humidity: {hum:.1f} %</p></div><br>", unsafe_allow_html=True)
-
-# --- Trends Page ---
 elif page == "📈 Trends":
-    st.title("📈 Trends Over Time")
-    metric_options = filtered_df["Metric"].unique().tolist()
-    metric_selected = st.selectbox("Choose Metric", metric_options, index=0)
-    trend_df = filtered_df[filtered_df["Metric"] == metric_selected]
-    fig = px.line(trend_df, x="Timestamp", y="Value", color="Room", template="plotly_dark" if dark_mode else "plotly_white")
-    st.plotly_chart(fig, use_container_width=True)
+    st.subheader("📊 Trends (All Rooms)")
+    for room in room_names:
+        temp_col = f"Temperature_{room}"
+        if temp_col in df.columns:
+            fig = px.line(df, x="Timestamp", y=temp_col, title=f"{room} - Temperature Trend")
+            st.plotly_chart(fig, use_container_width=True)
 
-# --- Settings Page ---
 elif page == "⚙️ Settings":
-    st.title("⚙️ Settings")
-    st.info("This page can later include notification thresholds, profile, API keys, etc.")
+    st.subheader("⚙️ Dashboard Settings")
+    st.markdown("- Toggle theme (Light/Dark)")
+    st.markdown("- Navigate between pages")
+    st.markdown("- Filter data by date range")
+    st.markdown("- Future: Add export/download, notifications")
 
-# --- Alerts ---
-alert_df = filtered_df[filtered_df["Metric"] == "Temperature"]
-if not alert_df.empty and alert_df["Value"].max() > 30:
-    st.sidebar.warning("🔥 High temperature alert!")
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<center>Built with ❤️ by Makka using Streamlit</center>", unsafe_allow_html=True)
