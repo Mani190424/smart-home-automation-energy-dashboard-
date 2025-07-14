@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -34,52 +33,63 @@ selected_dates = st.sidebar.date_input(
     max_value=max_date
 )
 
-# Apply filter
+room_options = ["LivingRoom", "Kitchen", "Bedroom"]
+selected_room = st.sidebar.selectbox("Select Room", room_options)
+
+# Apply date filter
 if isinstance(selected_dates, list) and len(selected_dates) == 2:
     df = df[(df["AC_Timestamp"] >= pd.to_datetime(selected_dates[0])) &
             (df["AC_Timestamp"] <= pd.to_datetime(selected_dates[1]))]
 
+# Dynamic column names based on room
+temp_col = f"Temperature_{selected_room}"
+humid_col = f"Humidity_{selected_room}"
+
 # Header
 st.markdown("""
-    <h1 style='text-align: center; color: #00ffcc;'>🏡 Smart Home Energy Dashboard</h1>
-    <hr style='border: 1px solid #333;'>
+    <div style='background-color:#1f4e5f;padding:10px;border-radius:10px;'>
+        <h1 style='text-align: center; color: white;'>🏡 Smart Home Energy Dashboard</h1>
+    </div>
+    <br>
 """, unsafe_allow_html=True)
 
-# KPIs
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("🌡️ Avg Temperature", f"{df[['Temperature_LivingRoom','Temperature_Kitchen','Temperature_Bedroom']].mean().mean():.2f} °C")
-with col2:
-    st.metric("💧 Avg Humidity", f"{df[['Humidity_LivingRoom','Humidity_Kitchen','Humidity_Bedroom']].mean().mean():.2f} %")
-with col3:
-    st.metric("⚡ Total Energy Used", f"{df['Energy_Consumption'].sum():.2f} kWh")
+# KPI Cards
+kpi1, kpi2, kpi3 = st.columns(3)
+with kpi1:
+    st.markdown("<div style='background-color:#264653;padding:20px;border-radius:10px;color:white;'>"
+                f"<h4>🌡️ Avg {selected_room} Temp</h4><h2>{df[temp_col].mean():.2f} °C</h2></div>", unsafe_allow_html=True)
+with kpi2:
+    st.markdown("<div style='background-color:#2a9d8f;padding:20px;border-radius:10px;color:white;'>"
+                f"<h4>💧 Avg {selected_room} Humidity</h4><h2>{df[humid_col].mean():.2f} %</h2></div>", unsafe_allow_html=True)
+with kpi3:
+    st.markdown("<div style='background-color:#e76f51;padding:20px;border-radius:10px;color:white;'>"
+                f"<h4>⚡ Total Energy</h4><h2>{df['Energy_Consumption'].sum():.2f} kWh</h2></div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
 # Charts
 col1, col2 = st.columns((2,1))
 with col1:
-    fig1 = px.line(df, x="AC_Timestamp", y="Energy_Consumption", title="⚡ Energy Consumption Over Time",
-                   labels={"AC_Timestamp":"Time", "Energy_Consumption":"Energy (kWh)"})
+    fig1 = px.line(df, x="AC_Timestamp", y="Energy_Consumption", title="⚡ Energy Over Time")
+    fig1.update_layout(plot_bgcolor="#111", paper_bgcolor="#111", font_color="#fff")
     st.plotly_chart(fig1, use_container_width=True)
 
 with col2:
-    avg_temp = df[["Temperature_LivingRoom", "Temperature_Kitchen", "Temperature_Bedroom"]].mean()
-    fig2 = px.bar(avg_temp, x=avg_temp.index, y=avg_temp.values, 
-                  title="🌡️ Avg Temperature by Room",
-                  labels={"x":"Room", "y":"Avg Temp (°C)"})
+    fig2 = px.histogram(df, x=temp_col, nbins=20, title=f"🌡️ {selected_room} Temperature Distribution")
+    fig2.update_layout(plot_bgcolor="#111", paper_bgcolor="#111", font_color="#fff")
     st.plotly_chart(fig2, use_container_width=True)
 
-col3, col4 = st.columns((1,1))
+col3, col4 = st.columns(2)
 with col3:
-    avg_humidity = df[["Humidity_LivingRoom", "Humidity_Kitchen", "Humidity_Bedroom"]].mean()
-    fig3 = px.pie(values=avg_humidity.values, names=avg_humidity.index,
-                  title="💧 Humidity Distribution by Room")
+    fig3 = px.pie(values=[df[humid_col].mean(), 100 - df[humid_col].mean()], 
+                  names=[f"Avg {selected_room} Humidity", "Other"], 
+                  title="💧 Humidity Share")
+    fig3.update_layout(paper_bgcolor="#111", font_color="#fff")
     st.plotly_chart(fig3, use_container_width=True)
 
 with col4:
-    st.dataframe(df.tail(10), use_container_width=True)
+    st.dataframe(df[["AC_Timestamp", temp_col, humid_col, "Energy_Consumption"]].tail(10), use_container_width=True)
 
-# Download filtered data
-csv = df.to_csv(index=False).encode('utf-8')
-st.download_button("Download Filtered Data", data=csv, file_name="filtered_data.csv", mime='text/csv')
+# Download Button
+csv = df.to_csv(index=False).encode("utf-8")
+st.download_button("Download Filtered Data", data=csv, file_name="filtered_data.csv", mime="text/csv")
