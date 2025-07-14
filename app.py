@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Page settings
+# --- Page settings ---
 st.set_page_config(page_title="Smart Home Dashboard", layout="wide")
 
 # --- Custom CSS for dark theme + stylish cards ---
@@ -57,9 +57,17 @@ max_date = df["Timestamp"].max()
 
 selected_dates = st.sidebar.date_input("Select Date Range", [min_date, max_date])
 
-non_room_cols = ["Timestamp"]
-room_columns = [col for col in df.columns if col not in non_room_cols]
-selected_rooms = st.sidebar.multiselect("Select Room(s)", room_columns, default=room_columns)
+# ✅ Select only numeric columns (exclude strings like Temperature/Humidity text)
+energy_columns = [
+    col for col in df.columns 
+    if col != "Timestamp" and pd.api.types.is_numeric_dtype(df[col])
+]
+
+if not energy_columns:
+    st.error("❌ No numeric energy usage columns found. Please check your dataset.")
+    st.stop()
+
+selected_rooms = st.sidebar.multiselect("Select Room(s)", energy_columns, default=energy_columns)
 
 # --- Filter Logic ---
 if isinstance(selected_dates, list) and len(selected_dates) == 2:
@@ -69,8 +77,13 @@ else:
 
 filtered_df = df[(df["Timestamp"] >= start_date) & (df["Timestamp"] <= end_date)]
 
-melted_df = filtered_df.melt(id_vars=["Timestamp"], value_vars=selected_rooms, 
-                             var_name="Room", value_name="Energy_Consumption")
+# ✅ Safe melt after filtering selected numeric columns only
+melted_df = filtered_df.melt(
+    id_vars=["Timestamp"],
+    value_vars=selected_rooms,
+    var_name="Room",
+    value_name="Energy_Consumption"
+)
 
 # --- KPI Cards ---
 st.markdown("### 📊 Key Metrics")
@@ -78,7 +91,7 @@ st.markdown("### 📊 Key Metrics")
 col1, col2, col3, col4 = st.columns(4)
 
 total_power = melted_df["Energy_Consumption"].sum()
-avg_temp = 24.5  # Static dummy values for now
+avg_temp = 24.5  # Optional: Replace with actual data if available
 max_temp = 28.1
 min_temp = 20.3
 
