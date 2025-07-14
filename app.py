@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime
 
 # Page Config
@@ -69,41 +70,75 @@ with kpi3:
 
 st.markdown("---")
 
-# Energy Aggregation Logic
-if aggregation == "Daily":
-    df_agg = df.groupby(df["AC_Timestamp"].dt.date).agg({"Energy_Consumption": "sum"}).reset_index()
-    x_col = "AC_Timestamp"
-    df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-elif aggregation == "Weekly":
-    df_agg = df.resample("W", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
-    df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-else:  # Monthly
-    df_agg = df.resample("M", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
-    df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+# Chart Selector and Type Toggle
+chart_option = st.selectbox("📊 Select Chart", ["Energy Over Time", "Temperature Distribution", "Humidity Share"])
+chart_type = st.selectbox("🎛️ Select Chart Type", ["Line", "Bar", "Pie", "Scatter", "Combo"])
 
-# Charts
-col1, col2 = st.columns((2,1))
-with col1:
-    fig1 = px.line(df_agg, x="Date", y="Energy_Consumption", title=f"⚡ Energy Over Time ({aggregation})")
-    fig1.update_layout(plot_bgcolor="#111", paper_bgcolor="#111", font_color="#fff")
-    st.plotly_chart(fig1, use_container_width=True)
+# Chart Data Logic
+if chart_option == "Energy Over Time":
+    if aggregation == "Daily":
+        df_agg = df.groupby(df["AC_Timestamp"].dt.date).agg({"Energy_Consumption": "sum"}).reset_index()
+        df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+    elif aggregation == "Weekly":
+        df_agg = df.resample("W", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
+        df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+    else:
+        df_agg = df.resample("M", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
+        df_agg.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
 
-with col2:
-    fig2 = px.histogram(df, x=temp_col, nbins=20, title=f"🌡️ {selected_room} Temperature Distribution")
-    fig2.update_layout(plot_bgcolor="#111", paper_bgcolor="#111", font_color="#fff")
-    st.plotly_chart(fig2, use_container_width=True)
+    if chart_type == "Line":
+        fig = px.line(df_agg, x="Date", y="Energy_Consumption", title=f"⚡ Energy Over Time ({aggregation})")
+    elif chart_type == "Bar":
+        fig = px.bar(df_agg, x="Date", y="Energy_Consumption", title=f"⚡ Energy Over Time ({aggregation})")
+    elif chart_type == "Scatter":
+        fig = px.scatter(df_agg, x="Date", y="Energy_Consumption", title=f"⚡ Energy Over Time ({aggregation})")
+    elif chart_type == "Combo":
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=df_agg["Date"], y=df_agg["Energy_Consumption"], name="Bar"))
+        fig.add_trace(go.Scatter(x=df_agg["Date"], y=df_agg["Energy_Consumption"], mode='lines+markers', name="Line"))
+        fig.update_layout(title=f"⚡ Energy Over Time ({aggregation})")
+    else:
+        fig = px.area(df_agg, x="Date", y="Energy_Consumption", title=f"⚡ Energy Over Time ({aggregation})")
 
-col3, col4 = st.columns(2)
-with col3:
-    fig3 = px.pie(values=[df[humid_col].mean(), 100 - df[humid_col].mean()], 
-                  names=[f"Avg {selected_room} Humidity", "Other"], 
-                  title="💧 Humidity Share")
-    fig3.update_layout(paper_bgcolor="#111", font_color="#fff")
-    st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
-with col4:
-    st.dataframe(df[["AC_Timestamp", temp_col, humid_col, "Energy_Consumption"]].tail(10), use_container_width=True)
+elif chart_option == "Temperature Distribution":
+    if chart_type in ["Bar", "Line", "Area"]:
+        fig = px.histogram(df, x=temp_col, nbins=20, title=f"🌡️ {selected_room} Temperature Distribution")
+    elif chart_type == "Scatter":
+        fig = px.scatter(df, x="AC_Timestamp", y=temp_col, title=f"🌡️ Temp Scatter - {selected_room}")
+    elif chart_type == "Combo":
+        fig = go.Figure()
+        fig.add_trace(go.Box(y=df[temp_col], name="Temp Distribution"))
+        fig.update_layout(title=f"🌡️ Temp Box Chart - {selected_room}")
+    else:
+        fig = px.histogram(df, x=temp_col, nbins=20, title=f"🌡️ {selected_room} Temperature Distribution")
+    st.plotly_chart(fig, use_container_width=True)
 
-# Download Button
+elif chart_option == "Humidity Share":
+    avg_humidity = df[humid_col].mean()
+    if chart_type == "Pie":
+        fig = px.pie(values=[avg_humidity, 100 - avg_humidity], 
+                     names=[f"Avg {selected_room} Humidity", "Other"], 
+                     title="💧 Humidity Share")
+    elif chart_type == "Bar":
+        fig = px.bar(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity], 
+                     title="💧 Humidity Share")
+    elif chart_type == "Scatter":
+        fig = px.scatter(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity], title="💧 Humidity Share")
+    elif chart_type == "Combo":
+        fig = go.Figure()
+        fig.add_trace(go.Pie(values=[avg_humidity], labels=[f"{selected_room}"], hole=0.4))
+        fig.update_layout(title="💧 Humidity Combo View")
+    else:
+        fig = px.pie(values=[avg_humidity, 100 - avg_humidity], 
+                     names=[f"Avg {selected_room} Humidity", "Other"], 
+                     title="💧 Humidity Share")
+    st.plotly_chart(fig, use_container_width=True)
+
+# Table & Download
+st.markdown("---")
+st.dataframe(df[["AC_Timestamp", temp_col, humid_col, "Energy_Consumption"]].tail(10), use_container_width=True)
+
 csv = df.to_csv(index=False).encode("utf-8")
 st.download_button("Download Filtered Data", data=csv, file_name="filtered_data.csv", mime="text/csv")
