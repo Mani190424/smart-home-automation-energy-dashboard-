@@ -13,6 +13,22 @@ st.set_page_config(
     page_icon="🏡"
 )
 
+# 🔧 Background Styling (Dark Theme)
+st.markdown("""
+    <style>
+    body {
+        background-color: #0e1117;
+        color: white;
+    }
+    .stApp {
+        background-color: #0e1117;
+    }
+    .block-container {
+        padding-top: 2rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # Load Data
 def load_data():
     df = pd.read_csv("processed_with_ac_timestamp(Sheet1).csv")
@@ -96,58 +112,4 @@ elif energy_chart_type == "Combo":
     fig.add_trace(go.Bar(x=df_energy["Date"], y=df_energy["Energy_Consumption"], name="Bar"))
     fig.add_trace(go.Scatter(x=df_energy["Date"], y=df_energy["Energy_Consumption"], mode='lines+markers', name="Line"))
 else:
-    fig = px.area(df_energy, x="Date", y="Energy_Consumption")
-
-st.plotly_chart(fig, use_container_width=True)
-
-# TEMPERATURE DISTRIBUTION
-st.subheader("🌡️ Temperature Distribution")
-temp_chart_type = st.selectbox("Chart Type - Temperature", ["Line", "Bar", "Box"], key="temp")
-
-if aggregation == "Daily":
-    df_temp = df.groupby(df["AC_Timestamp"].dt.date).agg({temp_col: "mean"}).reset_index()
-    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-elif aggregation == "Weekly":
-    df_temp = df.resample("W", on="AC_Timestamp")[temp_col].mean().reset_index()
-    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-else:
-    df_temp = df.resample("M", on="AC_Timestamp")[temp_col].mean().reset_index()
-    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-
-if temp_chart_type == "Line":
-    fig = px.line(df_temp, x="Date", y=temp_col)
-elif temp_chart_type == "Bar":
-    fig = px.bar(df_temp, x="Date", y=temp_col)
-elif temp_chart_type == "Box":
-    fig = px.box(df, y=temp_col)
-
-st.plotly_chart(fig, use_container_width=True)
-
-# HUMIDITY SHARE
-st.subheader("💧 Humidity Share")
-humid_chart_type = st.selectbox("Chart Type - Humidity", ["Pie", "Bar", "Scatter"], key="humid")
-
-if aggregation == "Daily":
-    df_humid = df.groupby(df["AC_Timestamp"].dt.date).agg({humid_col: "mean"}).reset_index()
-elif aggregation == "Weekly":
-    df_humid = df.resample("W", on="AC_Timestamp")[humid_col].mean().reset_index()
-else:
-    df_humid = df.resample("M", on="AC_Timestamp")[humid_col].mean().reset_index()
-
-avg_humidity = df_humid[humid_col].mean()
-
-if humid_chart_type == "Pie":
-    fig = px.pie(values=[avg_humidity, 100 - avg_humidity], names=[f"Avg {selected_room} Humidity", "Other"])
-elif humid_chart_type == "Bar":
-    fig = px.bar(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
-elif humid_chart_type == "Scatter":
-    fig = px.scatter(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
-
-st.plotly_chart(fig, use_container_width=True)
-
-# Table & Download
-st.markdown("---")
-st.dataframe(df[["AC_Timestamp", temp_col, humid_col, "Energy_Consumption"]].tail(10), use_container_width=True)
-
-csv = df.to_csv(index=False).encode("utf-8")
-st.download_button("Download Filtered Data", data=csv, file_name="filtered_data.csv", mime="text/csv")
+    fig = px.area(df_energy, x="
