@@ -52,22 +52,26 @@ df = load_data()
 
 # --- Sidebar Filters ---
 st.sidebar.header("🔍 Filters")
+
 min_date = df["Timestamp"].min()
 max_date = df["Timestamp"].max()
-
 selected_dates = st.sidebar.date_input("Select Date Range", [min_date, max_date])
 
-# ✅ Select only numeric columns (exclude strings like Temperature/Humidity text)
-energy_columns = [
+# ✅ Identify numeric room columns only (for energy usage)
+valid_room_columns = [
     col for col in df.columns 
     if col != "Timestamp" and pd.api.types.is_numeric_dtype(df[col])
 ]
 
-if not energy_columns:
-    st.error("❌ No numeric energy usage columns found. Please check your dataset.")
+if not valid_room_columns:
+    st.error("❌ No valid numeric energy usage columns found.")
     st.stop()
 
-selected_rooms = st.sidebar.multiselect("Select Room(s)", energy_columns, default=energy_columns)
+selected_rooms = st.sidebar.multiselect(
+    "Select Room(s)",
+    options=valid_room_columns,
+    default=valid_room_columns
+)
 
 # --- Filter Logic ---
 if isinstance(selected_dates, list) and len(selected_dates) == 2:
@@ -77,7 +81,12 @@ else:
 
 filtered_df = df[(df["Timestamp"] >= start_date) & (df["Timestamp"] <= end_date)]
 
-# ✅ Safe melt after filtering selected numeric columns only
+# ✅ Prevent error if user deselects all rooms
+if not selected_rooms:
+    st.warning("⚠️ Please select at least one room to display data.")
+    st.stop()
+
+# --- Melted Data for Visualization ---
 melted_df = filtered_df.melt(
     id_vars=["Timestamp"],
     value_vars=selected_rooms,
@@ -87,11 +96,10 @@ melted_df = filtered_df.melt(
 
 # --- KPI Cards ---
 st.markdown("### 📊 Key Metrics")
-
 col1, col2, col3, col4 = st.columns(4)
 
 total_power = melted_df["Energy_Consumption"].sum()
-avg_temp = 24.5  # Optional: Replace with actual data if available
+avg_temp = 24.5  # Optional: link to actual values later
 max_temp = 28.1
 min_temp = 20.3
 
@@ -115,7 +123,7 @@ fig_line = px.line(
 )
 st.plotly_chart(fig_line, use_container_width=True)
 
-# --- Bar Chart (Monthly) ---
+# --- Bar Chart ---
 st.markdown("### 📊 Monthly Power Usage by Room")
 bar_df = melted_df.copy()
 bar_df["Month"] = bar_df["Timestamp"].dt.to_period("M").astype(str)
