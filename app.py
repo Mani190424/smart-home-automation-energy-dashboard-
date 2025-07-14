@@ -13,25 +13,6 @@ st.set_page_config(
     page_icon="🏡"
 )
 
-# Neon Purple Theme Styling
-st.markdown("""
-    <style>
-    .stApp {
-        background: linear-gradient(to right, #1c0c36, #2d1457);
-        color: white;
-    }
-    .css-1d391kg, .css-1v3fvcr, .block-container {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border-radius: 15px;
-        padding: 20px;
-        color: white !important;
-    }
-    h1, h2, h3, h4, h5, h6, p, label, span, div {
-        color: white !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 # Load Data
 def load_data():
     df = pd.read_csv("processed_with_ac_timestamp(Sheet1).csv")
@@ -42,51 +23,131 @@ def load_data():
 
 df = load_data()
 
-# Sidebar Navigation
-with st.sidebar:
-    st.markdown("## 📁 Pages")
-    page = st.radio("Navigate", ["🏠 Dashboard", "🛏️ Rooms", "📈 Trends", "⚙️ Settings"])
+# Sidebar Filters
+st.sidebar.header("🔍 Filter Data")
+min_date = df["AC_Timestamp"].min()
+max_date = df["AC_Timestamp"].max()
 
-# Page Routing
-if page == "🏠 Dashboard":
-    st.markdown("<h1 style='text-align: center;'>🏡 Smart Home Energy Dashboard</h1>", unsafe_allow_html=True)
+selected_dates = st.sidebar.date_input(
+    "Select Date Range",
+    [min_date, max_date],
+    min_value=min_date,
+    max_value=max_date
+)
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        fig = go.Figure(go.Indicator(
-            mode = "gauge+number",
-            value = df["Temperature_LivingRoom"].mean(),
-            title = {'text': f"Avg Temp (°C)"},
-            gauge = {'axis': {'range': [0, 50]}, 'bar': {'color': '#d627ff'}}
-        ))
-        st.plotly_chart(fig, use_container_width=True)
+room_options = ["LivingRoom", "Kitchen", "Bedroom"]
+selected_room = st.sidebar.selectbox("Select Room", room_options)
 
-    with col2:
-        fig = go.Figure(go.Indicator(
-            mode = "gauge+number",
-            value = df["Humidity_LivingRoom"].mean(),
-            title = {'text': f"Avg Humidity (%)"},
-            gauge = {'axis': {'range': [0, 100]}, 'bar': {'color': '#1ecbe1'}}
-        ))
-        st.plotly_chart(fig, use_container_width=True)
+aggregation = st.sidebar.radio("Aggregation Level", ["Daily", "Weekly", "Monthly"], index=0)
 
-    with col3:
-        fig = go.Figure(go.Indicator(
-            mode = "gauge+number",
-            value = df['Energy_Consumption'].sum(),
-            title = {'text': f"Total Energy (kWh)"},
-            gauge = {'axis': {'range': [0, df['Energy_Consumption'].sum()*1.2]}, 'bar': {'color': '#fcca1b'}}
-        ))
-        st.plotly_chart(fig, use_container_width=True)
+# Apply date filter
+if isinstance(selected_dates, list) and len(selected_dates) == 2:
+    df = df[(df["AC_Timestamp"] >= pd.to_datetime(selected_dates[0])) &
+            (df["AC_Timestamp"] <= pd.to_datetime(selected_dates[1]))]
 
-elif page == "🛏️ Rooms":
-    st.header("🛏️ Room-wise Visualization")
-    st.info("Placeholder for room-wise comparison charts and stats.")
+# Dynamic column names based on room
+temp_col = f"Temperature_{selected_room}"
+humid_col = f"Humidity_{selected_room}"
 
-elif page == "📈 Trends":
-    st.header("📈 Trend Analysis")
-    st.info("Placeholder for trend over time (line/bar charts).")
+# Header
+st.markdown("""
+    <div style='background-color:#1f4e5f;padding:10px;border-radius:10px;'>
+        <h1 style='text-align: center; color: white;'>🏡 Smart Home Energy Dashboard</h1>
+    </div>
+    <br>
+""", unsafe_allow_html=True)
 
-elif page == "⚙️ Settings":
-    st.header("⚙️ Settings")
-    st.info("Placeholder for theme toggles, export options, etc.")
+# KPI Cards
+kpi1, kpi2, kpi3 = st.columns(3)
+with kpi1:
+    st.markdown("<div style='background-color:#264653;padding:20px;border-radius:10px;color:white;'>"
+                f"<h4>🌡️ Avg {selected_room} Temp</h4><h2>{df[temp_col].mean():.2f} °C</h2></div>", unsafe_allow_html=True)
+with kpi2:
+    st.markdown("<div style='background-color:#2a9d8f;padding:20px;border-radius:10px;color:white;'>"
+                f"<h4>💧 Avg {selected_room} Humidity</h4><h2>{df[humid_col].mean():.2f} %</h2></div>", unsafe_allow_html=True)
+with kpi3:
+    st.markdown("<div style='background-color:#e76f51;padding:20px;border-radius:10px;color:white;'>"
+                f"<h4>⚡ Total Energy</h4><h2>{df['Energy_Consumption'].sum():.2f} kWh</h2></div>", unsafe_allow_html=True)
+
+st.markdown("---")
+
+# ENERGY OVER TIME
+st.subheader("⚡ Energy Over Time")
+energy_chart_type = st.selectbox("Chart Type - Energy", ["Line", "Bar", "Scatter", "Combo"], key="energy")
+
+if aggregation == "Daily":
+    df_energy = df.groupby(df["AC_Timestamp"].dt.date).agg({"Energy_Consumption": "sum"}).reset_index()
+    df_energy.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+elif aggregation == "Weekly":
+    df_energy = df.resample("W", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
+    df_energy.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+else:
+    df_energy = df.resample("M", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
+    df_energy.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+
+if energy_chart_type == "Line":
+    fig = px.line(df_energy, x="Date", y="Energy_Consumption")
+elif energy_chart_type == "Bar":
+    fig = px.bar(df_energy, x="Date", y="Energy_Consumption")
+elif energy_chart_type == "Scatter":
+    fig = px.scatter(df_energy, x="Date", y="Energy_Consumption")
+elif energy_chart_type == "Combo":
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=df_energy["Date"], y=df_energy["Energy_Consumption"], name="Bar"))
+    fig.add_trace(go.Scatter(x=df_energy["Date"], y=df_energy["Energy_Consumption"], mode='lines+markers', name="Line"))
+else:
+    fig = px.area(df_energy, x="Date", y="Energy_Consumption")
+
+st.plotly_chart(fig, use_container_width=True)
+
+# TEMPERATURE DISTRIBUTION
+st.subheader("🌡️ Temperature Distribution")
+temp_chart_type = st.selectbox("Chart Type - Temperature", ["Line", "Bar", "Box"], key="temp")
+
+if aggregation == "Daily":
+    df_temp = df.groupby(df["AC_Timestamp"].dt.date).agg({temp_col: "mean"}).reset_index()
+    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+elif aggregation == "Weekly":
+    df_temp = df.resample("W", on="AC_Timestamp")[temp_col].mean().reset_index()
+    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+else:
+    df_temp = df.resample("M", on="AC_Timestamp")[temp_col].mean().reset_index()
+    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+
+if temp_chart_type == "Line":
+    fig = px.line(df_temp, x="Date", y=temp_col)
+elif temp_chart_type == "Bar":
+    fig = px.bar(df_temp, x="Date", y=temp_col)
+elif temp_chart_type == "Box":
+    fig = px.box(df, y=temp_col)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# HUMIDITY SHARE
+st.subheader("💧 Humidity Share")
+humid_chart_type = st.selectbox("Chart Type - Humidity", ["Pie", "Bar", "Scatter"], key="humid")
+
+if aggregation == "Daily":
+    df_humid = df.groupby(df["AC_Timestamp"].dt.date).agg({humid_col: "mean"}).reset_index()
+elif aggregation == "Weekly":
+    df_humid = df.resample("W", on="AC_Timestamp")[humid_col].mean().reset_index()
+else:
+    df_humid = df.resample("M", on="AC_Timestamp")[humid_col].mean().reset_index()
+
+avg_humidity = df_humid[humid_col].mean()
+
+if humid_chart_type == "Pie":
+    fig = px.pie(values=[avg_humidity, 100 - avg_humidity], names=[f"Avg {selected_room} Humidity", "Other"])
+elif humid_chart_type == "Bar":
+    fig = px.bar(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
+elif humid_chart_type == "Scatter":
+    fig = px.scatter(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
+
+st.plotly_chart(fig, use_container_width=True)
+
+# Table & Download
+st.markdown("---")
+st.dataframe(df[["AC_Timestamp", temp_col, humid_col, "Energy_Consumption"]].tail(10), use_container_width=True)
+
+csv = df.to_csv(index=False).encode("utf-8")
+st.download_button("Download Filtered Data", data=csv, file_name="filtered_data.csv", mime="text/csv")
