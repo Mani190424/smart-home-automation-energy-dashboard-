@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -7,8 +6,9 @@ from datetime import datetime
 import yagmail
 
 # === USER AUTH (CSV BASED) ===
-USERS_FILE = "users.csv"
-users_df = pd.read_csv(USERS_FILE)
+import os
+users_path = os.path.join(os.path.dirname(__file__), "users.csv")
+users_df = pd.read_csv(users_path)
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -58,7 +58,7 @@ if not st.session_state.authenticated:
                     st.warning("⚠️ Email not found in user list")
 
     st.stop()
-    
+
 # Page Config
 st.set_page_config(
     page_title="Smart Home Dashboard",
