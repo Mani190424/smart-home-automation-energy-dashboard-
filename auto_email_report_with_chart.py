@@ -5,9 +5,9 @@ import yagmail
 from datetime import datetime
 
 # === CONFIG ===
-SENDER_EMAIL = "your_email@gmail.com"
-APP_PASSWORD = "your_app_password"  # From https://myaccount.google.com/apppasswords
-RECIPIENT_EMAIL = "recipient_email@gmail.com"
+SENDER_EMAIL = "data.analyst190124.com"
+APP_PASSWORD = "smart123"  # From https://myaccount.google.com/apppasswords
+RECIPIENT_EMAIL = "mani1992004@gmail.com"
 CSV_FILE = "processed_with_ac_timestamp(Sheet1).csv"
 CHART_FILE = "daily_chart.png"
 
