@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -20,7 +19,7 @@ if not st.session_state.authenticated:
         if pwd == PASSWORD:
             st.session_state.authenticated = True
             st.success("✅ Access Granted")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("❌ Incorrect Password")
     st.stop()
