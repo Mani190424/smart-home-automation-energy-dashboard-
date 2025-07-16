@@ -19,8 +19,7 @@ An interactive Streamlit dashboard for analyzing room-wise energy usage, tempera
 
 ### 📸 Sample Screens
 
-_Add your dashboard screenshot or preview GIF here_
-
+<img width="1920" height="1008" alt="image" src="https://github.com/user-attachments/assets/54793758-14ae-41cb-b0cf-b6a7e1424ce1" />
 ---
 
 ### 🚀 How to Run
