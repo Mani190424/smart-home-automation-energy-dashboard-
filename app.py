@@ -1,10 +1,94 @@
 
 import streamlit as st
+
+# === EMAIL + PASSWORD LOGIN ===
+VALID_EMAIL = "mani1992004@gmail.com"
+VALID_PASSWORD = "smart123"
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("""
+        <h2 style='text-align:center;'>🔐 Login Required</h2>
+        <p style='text-align:center;'>Please enter your email and password to access the dashboard.</p>
+    """, unsafe_allow_html=True)
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if email == VALID_EMAIL and password == VALID_PASSWORD:
+            st.session_state.authenticated = True
+            st.success("✅ Login successful")
+            st.rerun()
+        else:
+            st.error("❌ Invalid email or password")
+    st.stop()
+
+# === LOGIN PAGE ===
+PASSWORD = "smart123"
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("""
+        <h2 style='text-align:center;'>🔐 Login Required</h2>
+        <p style='text-align:center;'>Enter the password to access the Smart Home Dashboard.</p>
+    """, unsafe_allow_html=True)
+    pwd = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if pwd == PASSWORD:
+            st.session_state.authenticated = True
+            st.success("✅ Access Granted")
+            st.rerun()
+        else:
+            st.error("❌ Incorrect Password")
+    st.stop()
+
+# === LOGIN PAGE ===
+PASSWORD = "smart123"
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("""
+        <h2 style='text-align:center;'>🔐 Login Required</h2>
+        <p style='text-align:center;'>Enter the password to access the Smart Home Dashboard.</p>
+    """, unsafe_allow_html=True)
+    pwd = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if pwd == PASSWORD:
+            st.session_state.authenticated = True
+            st.success("✅ Access Granted")
+            st.rerun()
+        else:
+            st.error("❌ Incorrect Password")
+    st.stop()
+    
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
+# === LOGIN PAGE ===
+PASSWORD = "smart123"
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("""
+        <h2 style='text-align:center;'>🔐 Login Required</h2>
+        <p style='text-align:center;'>Enter the password to access the Smart Home Dashboard.</p>
+    """, unsafe_allow_html=True)
+    pwd = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if pwd == PASSWORD:
+            st.session_state.authenticated = True
+            st.success("✅ Access Granted")
+            st.rerun()
+        else:
+            st.error("❌ Incorrect Password")
+    st.stop()
 # Page Config
 st.set_page_config(
     page_title="Smart Home Dashboard",
