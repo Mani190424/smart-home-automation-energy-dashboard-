@@ -1,16 +1,22 @@
 import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime
+import yagmail
 
-# === EMAIL + PASSWORD LOGIN ===
-VALID_EMAIL = "mani1992004@gmil.com"
-VALID_PASSWORD = "smart123"
+# === USER AUTH (CSV BASED) ===
+USERS_FILE = "users.csv"
+users_df = pd.read_csv(USERS_FILE)
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
+    st.session_state.email = ""
 
 if not st.session_state.authenticated:
     st.markdown("""
         <h2 style='text-align:center;'>🔐 Login Required</h2>
-        <p style='text-align:center;'>Please enter your email and password to access the dashboard.</p>
+        <p style='text-align:center;'>Enter your registered email and password to access the dashboard.</p>
     """, unsafe_allow_html=True)
 
     email = st.text_input("Email")
@@ -23,8 +29,10 @@ if not st.session_state.authenticated:
         forgot = st.button("❓ Forgot Password?")
 
     if login:
-        if email == VALID_EMAIL and password == VALID_PASSWORD:
+        match = users_df[(users_df["email"] == email) & (users_df["password"] == password)]
+        if not match.empty:
             st.session_state.authenticated = True
+            st.session_state.email = email
             st.success("✅ Login successful")
             st.rerun()
         else:
@@ -32,58 +40,24 @@ if not st.session_state.authenticated:
 
     if forgot:
         with st.expander("📩 Reset your password"):
-            user_email = st.text_input("Enter your email to receive reset link")
+            user_email = st.text_input("Enter your registered email")
             if st.button("Send Reset Link"):
-                if user_email:
-                    st.success(f"✅ Password reset link sent to {user_email}")
+                if user_email in users_df.email.values:
+                    try:
+                        yag = yagmail.SMTP("your_email@gmail.com", "your_app_password")
+                        yag.send(
+                            to=user_email,
+                            subject="🔐 Reset your password",
+                            contents=f"Hello,\n\nClick the link below to reset your password (simulation):\nhttps://reset-link.com/{user_email}"
+                        )
+                        st.success(f"✅ Reset link sent to {user_email}")
+                    except:
+                        st.warning("⚠️ Email sending failed. Check credentials.")
                 else:
-                    st.warning("⚠️ Please enter a valid email")
+                    st.warning("⚠️ Email not found in user list")
 
     st.stop()
-
-PASSWORD = "smart123"
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if not st.session_state.authenticated:
-    st.markdown("""
-        <h2 style='text-align:center;'>🔐 Login Required</h2>
-        <p style='text-align:center;'>Enter the password to access the Smart Home Dashboard.</p>
-    """, unsafe_allow_html=True)
-    pwd = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if pwd == PASSWORD:
-            st.session_state.authenticated = True
-            st.success("✅ Access Granted")
-            st.rerun()
-        else:
-            st.error("❌ Incorrect Password")
-    st.stop()
-
-# === LOGIN PAGE ===
-PASSWORD = "smart123"
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if not st.session_state.authenticated:
-    st.markdown("""
-        <h2 style='text-align:center;'>🔐 Login Required</h2>
-        <p style='text-align:center;'>Enter the password to access the Smart Home Dashboard.</p>
-    """, unsafe_allow_html=True)
-    pwd = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if pwd == PASSWORD:
-            st.session_state.authenticated = True
-            st.success("✅ Access Granted")
-            st.rerun()
-        else:
-            st.error("❌ Incorrect Password")
-    st.stop()
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime
-
+    
 # === LOGIN PAGE ===
 PASSWORD = "smart123"
 if "authenticated" not in st.session_state:
