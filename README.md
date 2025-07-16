@@ -16,20 +16,6 @@ A modern, neon-themed interactive Streamlit dashboard that visualizes room-wise 
 - 🏠 Room Selector: LivingRoom, Kitchen, Bedroom
 - 🔁 Aggregation Toggle: Daily / Weekly / Monthly
 - 🎯 Circular KPI Dials (Plotly gauges)
-- 🌌 Neon Dark Theme
-- 🧭 Multi-page Layout: Dashboard / Rooms / Trends / Settings
-
----
-
-## 🧭 Navigation
-
-| Page | Description |
-|------|-------------|
-| 🏠 Dashboard | Main KPIs (gauge view) |
-| 🛏️ Rooms     | Room-wise placeholder (coming soon) |
-| 📈 Trends    | Trend analysis placeholder |
-| ⚙️ Settings  | Settings page placeholder |
-
 ---
 
 ## 🧰 Tech Stack
