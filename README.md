@@ -1,9 +1,9 @@
-🏡 Smart Home Energy Dashboard
+### 🏡 Smart Home Energy Dashboard
 
 An interactive Streamlit dashboard for analyzing room-wise energy usage, temperature, and humidity data from smart homes.
 
 ---
-🌟 Features
+### 🌟 Features
 
 - 📅 Date range filtering
 - 🏠 Room selector: LivingRoom, Kitchen, Bedroom
@@ -33,3 +33,14 @@ pip install -r requirements.txt
 
 # 3. Run the dashboard
 streamlit run app.py
+
+---
+
+### 📁 Project Structure
+
+smart-home-dashboard/
+├── app.py
+├── processed_with_ac_timestamp(Sheet1).csv
+├── requirements.txt
+└── README.md
+
