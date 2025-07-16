@@ -1,7 +1,7 @@
 import streamlit as st
 
 # === EMAIL + PASSWORD LOGIN ===
-VALID_EMAIL = "admin@example.com"
+VALID_EMAIL = "mani1992004@gmil.com"
 VALID_PASSWORD = "smart123"
 
 if "authenticated" not in st.session_state:
