@@ -71,59 +71,51 @@ df = load_data()
 
 import os  # Add at the top if not already
 
-import os
-
-# === SIDEBAR PROFILE FORM ===
 with st.sidebar:
     st.markdown("## 👤 My Profile")
     USER_PROFILE_FILE = "user_profiles.csv"
 
-    # ⏪ Load last saved profile if it exists
-    default_username = ""
-    default_email = ""
-    default_mobile = ""
-
+    # ⏪ Load previous data
+    saved_profile = None
     if os.path.exists(USER_PROFILE_FILE):
         try:
-            saved_df = pd.read_csv(USER_PROFILE_FILE)
-            if not saved_df.empty:
-                last_profile = saved_df.iloc[-1]
-                default_username = last_profile["Username"]
-                default_email = last_profile["Email"]
-                default_mobile = last_profile["Mobile"]
+            df_profiles = pd.read_csv(USER_PROFILE_FILE)
+            if not df_profiles.empty:
+                saved_profile = df_profiles.iloc[-1]
         except Exception as e:
-            st.error(f"Failed to load saved profile: {e}")
+            st.error(f"Error reading profile: {e}")
 
-    with st.form("profile_form"):
-        username = st.text_input("Username", value=default_username)
-        email = st.text_input("Email", value=default_email)
-        mobile = st.text_input("Mobile Number", value=default_mobile)
-        submitted = st.form_submit_button("💾 Save Profile")
+    # 🧾 Show only saved profile
+    if saved_profile is not None:
+        st.markdown(f"### 👤 {saved_profile['Username']}")
+        st.markdown(f"📧 {saved_profile['Email']}")
+        st.markdown(f"📱 {saved_profile['Mobile']}")
+        if st.button("✏️ Edit Profile"):
+            saved_profile = None  # Force edit mode next reload
+    else:
+        # 📝 Profile Form (shown only if not saved or editing)
+        with st.form("profile_form"):
+            username = st.text_input("Username")
+            email = st.text_input("Email")
+            mobile = st.text_input("Mobile Number")
+            submitted = st.form_submit_button("💾 Save Profile")
 
-        if submitted:
-            profile_df = pd.DataFrame([{
-                "Username": username,
-                "Email": email,
-                "Mobile": mobile
-            }])
+            if submitted:
+                profile_df = pd.DataFrame([{
+                    "Username": username,
+                    "Email": email,
+                    "Mobile": mobile
+                }])
 
-            if os.path.exists(USER_PROFILE_FILE):
-                existing_df = pd.read_csv(USER_PROFILE_FILE)
-                combined_df = pd.concat([existing_df, profile_df], ignore_index=True)
-                combined_df.drop_duplicates(subset=["Email"], keep="last", inplace=True)
-            else:
-                combined_df = profile_df
+                if os.path.exists(USER_PROFILE_FILE):
+                    existing_df = pd.read_csv(USER_PROFILE_FILE)
+                    combined_df = pd.concat([existing_df, profile_df], ignore_index=True)
+                    combined_df.drop_duplicates(subset=["Email"], keep="last", inplace=True)
+                else:
+                    combined_df = profile_df
 
-            combined_df.to_csv(USER_PROFILE_FILE, index=False)
-            st.success("✅ Profile Saved!")
-
-    # 🧾 Mini Profile Summary
-    if default_username:
-        st.markdown("---")
-        st.markdown("### 🧾 Last Saved")
-        st.markdown(f"👤 **{default_username}**")
-        st.markdown(f"📧 {default_email}")
-        st.markdown(f"📱 {default_mobile}")
+                combined_df.to_csv(USER_PROFILE_FILE, index=False)
+                st.success("✅ Profile Saved! Refresh to view summary.")
 
 # === SIDEBAR FILTER SECTION ===
 st.sidebar.header("🔍 Filter Data")
