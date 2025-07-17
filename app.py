@@ -61,7 +61,7 @@ selected_room = st.sidebar.selectbox("🏡Select Room", room_options)
 aggregation = st.sidebar.radio("Aggregation Level", ["Daily", "Weekly", "Monthly"], index=0)
 
 # Apply date filter
-if isinstance(selected_dates, list) and len(📆selected_dates) == 2:
+if isinstance(selected_dates, list) and len(selected_dates) == 2:
     df = df[(df["AC_Timestamp"] >= pd.to_datetime(📆selected_dates[0])) &
             (df["AC_Timestamp"] <= pd.to_datetime(📆selected_dates[1]))]
 
