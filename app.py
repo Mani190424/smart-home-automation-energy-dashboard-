@@ -69,44 +69,64 @@ def load_data():
 
 df = load_data()
 
-# Sidebar Filters
-(st.sidebar. form("👤 My Profile"))
-USER_PROFILE_FILE = "user_profiles.csv"
+import os  # Add at the top if not already
 
-with st.form("profile_form"):
-    username = st.text_input("Username")
-    email = st.text_input("Email")
-    mobile = st.text_input("Mobile Number")
-    submitted = st.form_submit_button("💾 Save Profile")
+# === SIDEBAR PROFILE FORM ===
+with st.sidebar:
+    st.markdown("## 👤 My Profile")
+    USER_PROFILE_FILE = "user_profiles.csv"
 
-    if submitted:
-        profile_df = pd.DataFrame([{"Username": username, "Email": email, "Mobile": mobile}])
+    with st.form("profile_form"):
+        username = st.text_input("Username")
+        email = st.text_input("Email")
+        mobile = st.text_input("Mobile Number")
+        submitted = st.form_submit_button("💾 Save Profile")
 
-        if os.path.exists(USER_PROFILE_FILE):
-            existing_df = pd.read_csv(USER_PROFILE_FILE)
-            combined_df = pd.concat([existing_df, profile_df], ignore_index=True)
-            combined_df.drop_duplicates(subset=["Email"], keep="last", inplace=True)
-        else:
-            combined_df = profile_df
+        if submitted:
+            profile_df = pd.DataFrame([{
+                "Username": username,
+                "Email": email,
+                "Mobile": mobile
+            }])
 
-        combined_df.to_csv(USER_PROFILE_FILE, index=False)
-        st.success(f"✅ Profile Saved: {username} | {email} | {mobile}")
+            if os.path.exists(USER_PROFILE_FILE):
+                existing_df = pd.read_csv(USER_PROFILE_FILE)
+                combined_df = pd.concat([existing_df, profile_df], ignore_index=True)
+                combined_df.drop_duplicates(subset=["Email"], keep="last", inplace=True)
+            else:
+                combined_df = profile_df
 
+            combined_df.to_csv(USER_PROFILE_FILE, index=False)
+            st.success("✅ Profile Saved!")
+
+    # 💡 Mini Profile Summary
+    if os.path.exists(USER_PROFILE_FILE):
+        saved_df = pd.read_csv(USER_PROFILE_FILE)
+        last_profile = saved_df.iloc[-1] if not saved_df.empty else None
+        if last_profile is not None:
+            st.markdown("---")
+            st.markdown("### 🧾 Last Saved Profile")
+            st.markdown(f"👤 **Username**: {last_profile['Username']}")
+            st.markdown(f"📧 **Email**: {last_profile['Email']}")
+            st.markdown(f"📱 **Mobile**: {last_profile['Mobile']}")
+
+# === SIDEBAR FILTER SECTION ===
 st.sidebar.header("🔍 Filter Data")
+
 min_date = df["AC_Timestamp"].min()
 max_date = df["AC_Timestamp"].max()
 
 selected_dates = st.sidebar.date_input(
-    "📆Select Date Range",
+    "📆 Select Date Range",
     [min_date, max_date],
     min_value=min_date,
     max_value=max_date
 )
 
 room_options = ["LivingRoom", "Kitchen", "Bedroom"]
-selected_room = st.sidebar.selectbox("🏡Select Room", room_options)
+selected_room = st.sidebar.selectbox("🏡 Select Room", room_options)
 
-aggregation = st.sidebar.radio("📈Aggregation Level", ["Daily", "Weekly", "Monthly"], index=0)
+aggregation = st.sidebar.radio("📊 Aggregation Level", ["Daily", "Weekly", "Monthly"], index=0)
 
 # Apply date filter
 if isinstance(selected_dates, list) and len(selected_dates) == 2:
