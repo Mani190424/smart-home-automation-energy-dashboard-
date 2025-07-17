@@ -69,13 +69,12 @@ def load_data():
 
 df = load_data()
 
-import os  # Add at the top if not already
+import os
 
 with st.sidebar:
     st.markdown("## 👤 My Profile")
     USER_PROFILE_FILE = "user_profiles.csv"
 
-    # ⏪ Load previous data
     saved_profile = None
     if os.path.exists(USER_PROFILE_FILE):
         try:
@@ -85,15 +84,11 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Error reading profile: {e}")
 
-    # 🧾 Show only saved profile
     if saved_profile is not None:
         st.markdown(f"### 👤 {saved_profile['Username']}")
         st.markdown(f"📧 {saved_profile['Email']}")
         st.markdown(f"📱 {saved_profile['Mobile']}")
-        if st.button("✏️ Edit Profile"):
-            saved_profile = None  # Force edit mode next reload
     else:
-        # 📝 Profile Form (shown only if not saved or editing)
         with st.form("profile_form"):
             username = st.text_input("Username")
             email = st.text_input("Email")
@@ -116,6 +111,7 @@ with st.sidebar:
 
                 combined_df.to_csv(USER_PROFILE_FILE, index=False)
                 st.success("✅ Profile Saved! Refresh to view summary.")
+
 
 # === SIDEBAR FILTER SECTION ===
 st.sidebar.header("🔍 Filter Data")
