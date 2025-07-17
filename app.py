@@ -190,8 +190,15 @@ elif humid_chart_type == "Scatter":
     fig = px.scatter(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
 st.plotly_chart(fig, use_container_width=True)
 
-# 🔍 Filter by date
-filtered_df = df[(df["AC_Timestamp"] >= pd.to_datetime(start_date)) & (df["AC_Timestamp"] <= pd.to_datetime(end_date))]
+# In your sidebar (or top section):
+start_date, end_date = st.sidebar.date_input("Select Date Range", value=[df["AC_Timestamp"].min(), df["AC_Timestamp"].max()])
+
+# Convert to datetime
+start_date = pd.to_datetime(start_date)
+end_date = pd.to_datetime(end_date)
+
+# Apply filter
+filtered_df = df[(df["AC_Timestamp"] >= start_date) & (df["AC_Timestamp"] <= end_date)]
 
 # 📊 Preview table of filtered data
 st.markdown("### 🔎 Filtered Data Preview")
