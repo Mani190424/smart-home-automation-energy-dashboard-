@@ -1,28 +1,53 @@
-    
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import os
 
-# === LOGIN PAGE ===
-PASSWORD = "smart123"
+# === USER AUTHENTICATION FROM CSV ===
+USERS_FILE = "users.csv"
+users_path = os.path.join(os.path.dirname(__file__), USERS_FILE)
+users_df = pd.read_csv(users_path)
+
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
+    st.session_state.email = ""
 
 if not st.session_state.authenticated:
     st.markdown("""
         <h2 style='text-align:center;'>🔐 Login Required</h2>
-        <p style='text-align:center;'>Enter the password to access the Smart Home Dashboard.</p>
+        <p style='text-align:center;'>Enter your email and password to access the dashboard.</p>
     """, unsafe_allow_html=True)
-    pwd = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if pwd == PASSWORD:
+
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        login = st.button("Login")
+    with col2:
+        forgot = st.button("❓ Forgot Password?")
+
+    if login:
+        user = users_df[(users_df['email'] == email) & (users_df['password'] == password)]
+        if not user.empty:
             st.session_state.authenticated = True
-            st.success("✅ Access Granted")
+            st.session_state.email = email
+            st.success("✅ Login successful")
             st.rerun()
         else:
-            st.error("❌ Incorrect Password")
+            st.error("❌ Invalid email or password")
+
+    if forgot:
+        with st.expander("📩 Reset your password"):
+            user_email = st.text_input("Enter your registered email")
+            if st.button("Send Reset Link"):
+                if user_email in users_df.email.values:
+                    st.success(f"✅ Reset link sent to {user_email} (simulated)")
+                else:
+                    st.warning("⚠️ Email not found in user list")
+
     st.stop()
     
 # Page Config
