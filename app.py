@@ -70,7 +70,7 @@ def load_data():
 df = load_data()
 
 # Sidebar Filters
-st.sidebar.header("👤 My Profile")
+(st.sidebar.header("👤 My Profile")
 USER_PROFILE_FILE = "user_profiles.csv"
 
 with st.form("profile_form"):
@@ -91,6 +91,7 @@ with st.form("profile_form"):
 
         combined_df.to_csv(USER_PROFILE_FILE, index=False)
         st.success(f"✅ Profile Saved: {username} | {email} | {mobile}")
+        )
 
 st.sidebar.header("🔍 Filter Data")
 min_date = df["AC_Timestamp"].min()
