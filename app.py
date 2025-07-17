@@ -56,7 +56,7 @@ selected_dates = st.sidebar.date_input(
 )
 
 room_options = ["LivingRoom", "Kitchen", "Bedroom"]
-selected_room = st.sidebar.selectbox("🏡Select Room", room_options)
+selected_room = st.sidebar.selectbox("Select Room", room_options)
 
 aggregation = st.sidebar.radio("Aggregation Level", ["Daily", "Weekly", "Monthly"], index=0)
 
@@ -66,8 +66,8 @@ if isinstance(selected_dates, list) and len(selected_dates) == 2:
             (df["AC_Timestamp"] <= pd.to_datetime(selected_dates[1]))]
 
 # Dynamic column names based on room
-temp_col = f"Temperature_{🏡selected_room}"
-humid_col = f"Humidity_{🏡selected_room}"
+temp_col = f"Temperature_{selected_room}"
+humid_col = f"Humidity_{selected_room}"
 
 # Header
 st.markdown("""
