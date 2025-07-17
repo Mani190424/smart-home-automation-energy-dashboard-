@@ -71,7 +71,6 @@ df = load_data()
 
 # Sidebar Filters
 st.sidebar.header("👤 My Profile")
-import os
 USER_PROFILE_FILE = "user_profiles.csv"
 
 with st.form("profile_form"):
