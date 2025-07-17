@@ -71,24 +71,29 @@ df = load_data()
 
 import os
 
-with st.sidebar:
-    st.markdown("## 👤 My Profile")
-    USER_PROFILE_FILE = "user_profiles.csv"
+# === USER PROFILE ===
+USER_PROFILE_FILE = "user_profiles.csv"
 
-    saved_profile = None
+with st.sidebar.expander("👤 My Profile", expanded=True):
     if os.path.exists(USER_PROFILE_FILE):
         try:
-            df_profiles = pd.read_csv(USER_PROFILE_FILE)
-            if not df_profiles.empty:
-                saved_profile = df_profiles.iloc[-1]
+            existing_df = pd.read_csv(USER_PROFILE_FILE)
+            if not existing_df.empty:
+                latest_user = existing_df.iloc[-1]
+                st.subheader(latest_user["Username"])
+                st.markdown(f"📧 {latest_user['Email']}")
+                st.markdown(f"📱 {latest_user['Mobile']}")
+                if st.button("✏️ Edit Profile"):
+                    st.session_state["edit_profile"] = True
+            else:
+                st.session_state["edit_profile"] = True
         except Exception as e:
-            st.error(f"Error reading profile: {e}")
-
-    if saved_profile is not None:
-        st.markdown(f"### 👤 {saved_profile['Username']}")
-        st.markdown(f"📧 {saved_profile['Email']}")
-        st.markdown(f"📱 {saved_profile['Mobile']}")
+            st.warning("Error reading profile file.")
+            st.session_state["edit_profile"] = True
     else:
+        st.session_state["edit_profile"] = True
+
+    if st.session_state.get("edit_profile", False):
         with st.form("profile_form"):
             username = st.text_input("Username")
             email = st.text_input("Email")
@@ -96,22 +101,16 @@ with st.sidebar:
             submitted = st.form_submit_button("💾 Save Profile")
 
             if submitted:
-                profile_df = pd.DataFrame([{
-                    "Username": username,
-                    "Email": email,
-                    "Mobile": mobile
-                }])
-
+                profile_df = pd.DataFrame([{"Username": username, "Email": email, "Mobile": mobile}])
                 if os.path.exists(USER_PROFILE_FILE):
                     existing_df = pd.read_csv(USER_PROFILE_FILE)
                     combined_df = pd.concat([existing_df, profile_df], ignore_index=True)
                     combined_df.drop_duplicates(subset=["Email"], keep="last", inplace=True)
                 else:
                     combined_df = profile_df
-
                 combined_df.to_csv(USER_PROFILE_FILE, index=False)
-                st.success("✅ Profile Saved! Refresh to view summary.")
-
+                st.success(f"✅ Profile Saved: {username} | {email} | {mobile}")
+                st.session_state["edit_profile"] = False
 
 # === SIDEBAR FILTER SECTION ===
 st.sidebar.header("🔍 Filter Data")
