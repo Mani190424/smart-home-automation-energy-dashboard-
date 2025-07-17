@@ -70,11 +70,10 @@ def load_data():
 df = load_data()
 
 # Sidebar Filters
-
+st.sidebar.header("👤 My Profile")
 import os
 USER_PROFILE_FILE = "user_profiles.csv"
 
-st.markdown("### 👤 My Profile")
 with st.form("profile_form"):
     username = st.text_input("Username")
     email = st.text_input("Email")
