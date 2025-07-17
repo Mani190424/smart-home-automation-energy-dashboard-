@@ -190,6 +190,30 @@ elif humid_chart_type == "Scatter":
     fig = px.scatter(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
 st.plotly_chart(fig, use_container_width=True)
 
+# === USER PROFILE SECTION ===
+import os
+USER_PROFILE_FILE = "user_profiles.csv"
+
+st.markdown("### 👤 My Profile")
+with st.form("profile_form"):
+    username = st.text_input("Username")
+    email = st.text_input("Email")
+    mobile = st.text_input("Mobile Number")
+    submitted = st.form_submit_button("💾 Save Profile")
+
+    if submitted:
+        profile_df = pd.DataFrame([{"Username": username, "Email": email, "Mobile": mobile}])
+
+        if os.path.exists(USER_PROFILE_FILE):
+            existing_df = pd.read_csv(USER_PROFILE_FILE)
+            combined_df = pd.concat([existing_df, profile_df], ignore_index=True)
+            combined_df.drop_duplicates(subset=["Email"], keep="last", inplace=True)
+        else:
+            combined_df = profile_df
+
+        combined_df.to_csv(USER_PROFILE_FILE, index=False)
+        st.success(f"✅ Profile Saved: {username} | {email} | {mobile}")
+
 # In your sidebar (or top section):
 start_date, end_date = st.sidebar.date_input("📆Select Date Range", value=[df["AC_Timestamp"].min(), df["AC_Timestamp"].max()])
 
