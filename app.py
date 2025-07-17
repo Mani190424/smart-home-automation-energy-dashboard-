@@ -71,15 +71,33 @@ df = load_data()
 
 import os  # Add at the top if not already
 
+import os
+
 # === SIDEBAR PROFILE FORM ===
 with st.sidebar:
     st.markdown("## 👤 My Profile")
     USER_PROFILE_FILE = "user_profiles.csv"
 
+    # ⏪ Load last saved profile if it exists
+    default_username = ""
+    default_email = ""
+    default_mobile = ""
+
+    if os.path.exists(USER_PROFILE_FILE):
+        try:
+            saved_df = pd.read_csv(USER_PROFILE_FILE)
+            if not saved_df.empty:
+                last_profile = saved_df.iloc[-1]
+                default_username = last_profile["Username"]
+                default_email = last_profile["Email"]
+                default_mobile = last_profile["Mobile"]
+        except Exception as e:
+            st.error(f"Failed to load saved profile: {e}")
+
     with st.form("profile_form"):
-        username = st.text_input("Username")
-        email = st.text_input("Email")
-        mobile = st.text_input("Mobile Number")
+        username = st.text_input("Username", value=default_username)
+        email = st.text_input("Email", value=default_email)
+        mobile = st.text_input("Mobile Number", value=default_mobile)
         submitted = st.form_submit_button("💾 Save Profile")
 
         if submitted:
@@ -99,16 +117,13 @@ with st.sidebar:
             combined_df.to_csv(USER_PROFILE_FILE, index=False)
             st.success("✅ Profile Saved!")
 
-    # 💡 Mini Profile Summary
-    if os.path.exists(USER_PROFILE_FILE):
-        saved_df = pd.read_csv(USER_PROFILE_FILE)
-        last_profile = saved_df.iloc[-1] if not saved_df.empty else None
-        if last_profile is not None:
-            st.markdown("---")
-            st.markdown("### 🧾 Last Saved Profile")
-            st.markdown(f"👤 **Username**: {last_profile['Username']}")
-            st.markdown(f"📧 **Email**: {last_profile['Email']}")
-            st.markdown(f"📱 **Mobile**: {last_profile['Mobile']}")
+    # 🧾 Mini Profile Summary
+    if default_username:
+        st.markdown("---")
+        st.markdown("### 🧾 Last Saved")
+        st.markdown(f"👤 **{default_username}**")
+        st.markdown(f"📧 {default_email}")
+        st.markdown(f"📱 {default_mobile}")
 
 # === SIDEBAR FILTER SECTION ===
 st.sidebar.header("🔍 Filter Data")
