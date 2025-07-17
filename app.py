@@ -82,9 +82,9 @@ selected_dates = st.sidebar.date_input(
 )
 
 room_options = ["LivingRoom", "Kitchen", "Bedroom"]
-selected_room = st.sidebar.selectbox("Select Room", room_options)
+selected_room = st.sidebar.selectbox("🏡Select Room", room_options)
 
-aggregation = st.sidebar.radio("Aggregation Level", ["Daily", "Weekly", "Monthly"], index=0)
+aggregation = st.sidebar.radio("📈Aggregation Level", ["Daily", "Weekly", "Monthly"], index=0)
 
 # Apply date filter
 if isinstance(selected_dates, list) and len(selected_dates) == 2:
