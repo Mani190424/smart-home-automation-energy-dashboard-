@@ -81,32 +81,7 @@ if not st.session_state.authenticated:
             st.error("❌ Incorrect Password")
     st.stop()
     
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime
 
-# === LOGIN PAGE ===
-PASSWORD = "smart123"
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if not st.session_state.authenticated:
-    st.markdown("""
-        <h2 style='text-align:center;'>🔐 Login Required</h2>
-        <p style='text-align:center;'>Enter the password to access the Smart Home Dashboard.</p>
-    """, unsafe_allow_html=True)
-    pwd = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if pwd == PASSWORD:
-            st.session_state.authenticated = True
-            st.success("✅ Access Granted")
-            st.rerun()
-        else:
-            st.error("❌ Incorrect Password")
-    st.stop()
-
-    
 import streamlit as st
 import pandas as pd
 import plotly.express as px
