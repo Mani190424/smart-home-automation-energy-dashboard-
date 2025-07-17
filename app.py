@@ -188,8 +188,21 @@ elif humid_chart_type == "Bar":
     fig = px.bar(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
 elif humid_chart_type == "Scatter":
     fig = px.scatter(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
-
 st.plotly_chart(fig, use_container_width=True)
+
+# 🔍 Filter by date
+filtered_df = df[(df["AC_Timestamp"] >= pd.to_datetime(start_date)) & (df["AC_Timestamp"] <= pd.to_datetime(end_date))]
+
+# 📊 Preview table of filtered data
+st.markdown("### 🔎 Filtered Data Preview")
+st.write(f"Showing {len(filtered_df)} rows from **{start_date}** to **{end_date}**")
+st.dataframe(filtered_df, use_container_width=True, height=500)
+
+# 📥 Download section
+with st.expander("📩 Download Filtered Report"):
+    csv = filtered_df.to_csv(index=False).encode("utf-8")
+    st.download_button("📥 Download CSV", data=csv, file_name="filtered_report.csv", mime="text/csv")
+
 
 # Table & Download
 st.markdown("---")
