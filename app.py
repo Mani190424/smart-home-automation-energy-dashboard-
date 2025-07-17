@@ -69,10 +69,8 @@ def load_data():
 
 df = load_data()
 
-
 # Sidebar Filters
 
-# === USER PROFILE SECTION ===
 import os
 USER_PROFILE_FILE = "user_profiles.csv"
 
