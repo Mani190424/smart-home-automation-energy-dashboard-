@@ -70,7 +70,7 @@ def load_data():
 df = load_data()
 
 # Sidebar Filters
-(st.sidebar.header("👤 My Profile")
+(st.sidebar. form("👤 My Profile"))
 USER_PROFILE_FILE = "user_profiles.csv"
 
 with st.form("profile_form"):
