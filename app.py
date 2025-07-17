@@ -62,8 +62,8 @@ aggregation = st.sidebar.radio("Aggregation Level", ["Daily", "Weekly", "Monthly
 
 # Apply date filter
 if isinstance(selected_dates, list) and len(selected_dates) == 2:
-    df = df[(df["AC_Timestamp"] >= pd.to_datetime(📆selected_dates[0])) &
-            (df["AC_Timestamp"] <= pd.to_datetime(📆selected_dates[1]))]
+    df = df[(df["AC_Timestamp"] >= pd.to_datetime(selected_dates[0])) &
+            (df["AC_Timestamp"] <= pd.to_datetime(selected_dates[1]))]
 
 # Dynamic column names based on room
 temp_col = f"Temperature_{🏡selected_room}"
