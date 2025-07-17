@@ -71,4 +71,4 @@ Password: smart123
 
 ## 📚 License
 
-MIT License © 2025 [Your Name]
+MIT License © 2025 [mani@1901]
