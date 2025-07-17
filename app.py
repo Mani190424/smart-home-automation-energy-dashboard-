@@ -191,7 +191,7 @@ elif humid_chart_type == "Scatter":
 st.plotly_chart(fig, use_container_width=True)
 
 # In your sidebar (or top section):
-start_date, end_date = st.sidebar.date_input("Select Date Range", value=[df["AC_Timestamp"].min(), df["AC_Timestamp"].max()])
+start_date, end_date = st.sidebar.date_input("📆Select Date Range", value=[df["AC_Timestamp"].min(), df["AC_Timestamp"].max()])
 
 # Convert to datetime
 start_date = pd.to_datetime(start_date)
@@ -216,4 +216,4 @@ st.markdown("---")
 st.dataframe(df[["AC_Timestamp", temp_col, humid_col, "Energy_Consumption"]].tail(10), use_container_width=True)
 
 csv = df.to_csv(index=False).encode("utf-8")
-st.download_button("Download Filtered Data", data=csv, file_name="filtered_data.csv", mime="text/csv")
+st.download_button("📩Download Filtered Data", data=csv, file_name="filtered_data.csv", mime="text/csv")
