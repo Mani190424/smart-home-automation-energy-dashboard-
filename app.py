@@ -6,54 +6,48 @@ from datetime import datetime
 
 st.set_page_config(page_title="Smart Home Dashboard", layout="wide")
 
-# -----------------------------
-# Load Data
-# -----------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("processed_with_ac_timestamp_renamed.csv")
-    df['AC_Timestamp'] = pd.to_datetime(df['AC_Timestamp'])
-    return df
+    df['AC_Timestamp'] = pd.to_datetime(df['AC_Timestamp'], errors='coerce')
+    return df.dropna(subset=["AC_Timestamp"])
 
-# -----------------------------
-# MAIN APP
-# -----------------------------
 def main():
     st.title("🏠 Smart Home Energy Dashboard")
 
     df = load_data()
 
     # -----------------------------
-    # Sidebar Filters
+    # Sidebar or Top Filters
     # -----------------------------
-    st.sidebar.header("📊 Filters")
-    min_date = df['AC_Timestamp'].min().date()
-    max_date = df['AC_Timestamp'].max().date()
-    start_date, end_date = st.sidebar.date_input("📅 Select Date Range", [min_date, max_date], min_value=min_date, max_value=max_date)
+    st.subheader("📍 Room & Date Selection")
+    col_top1, col_top2 = st.columns([1, 2])
 
-    time_group = st.sidebar.selectbox("🕒 Group By", ["Daily", "Weekly", "Monthly", "Yearly"])
+    with col_top1:
+        room_list = ['LivingRoom', 'Bedroom', 'Outdoor', 'Kitchen']
+        selected_room = st.selectbox("Select Room", room_list)
 
-    room_list = ['LivingRoom', 'Bedroom', 'Outdoor', 'Kitchen']
-    selected_room = st.sidebar.selectbox("📍 Select Room", room_list)
+    with col_top2:
+        min_date = datetime(2004, 1, 1).date()
+        max_date = datetime(2012, 7, 21).date()
+        start_date, end_date = st.date_input("Select Date Range", [min_date, max_date],
+                                             min_value=min_date, max_value=max_date)
 
-    sensor_list = ["Temperature", "Humidity", "Energy_Consumption"]
-    if selected_room in ['LivingRoom', 'Bedroom', 'Kitchen']:
-        sensor_list += ["Wind_Speed", "Light_Intensity"]
-
-    selected_sensors = st.sidebar.multiselect("📈 Select Sensors", sensor_list, default=sensor_list[:3])
+    time_group = st.selectbox("🕒 Time Grouping", ["Daily", "Weekly", "Monthly", "Yearly"])
 
     # -----------------------------
-    # Data Filtering
+    # Filtered Data
     # -----------------------------
     df_filtered = df[(df['AC_Timestamp'].dt.date >= start_date) & (df['AC_Timestamp'].dt.date <= end_date)]
 
     # -----------------------------
-    # KPI Columns
+    # KPI Section
     # -----------------------------
+    st.subheader(f"🔢 KPIs - {selected_room}")
+
     temp_col = f"{selected_room}_Temperature"
     hum_col = f"{selected_room}_Humidity"
 
-    st.subheader(f"🛠️ Room: {selected_room}")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("🌡️ Avg Temp (°C)", f"{df_filtered[temp_col].mean():.2f}")
@@ -65,7 +59,18 @@ def main():
         st.metric("⚡ Total Energy (kWh)", f"{df_filtered['Energy_Consumption'].sum():.2f}")
 
     # -----------------------------
-    # Time Grouping
+    # Sensor Selection (Below KPIs)
+    # -----------------------------
+    st.subheader("📈 Select Sensors to View Trends")
+
+    sensor_list = ["Temperature", "Humidity", "Energy_Consumption"]
+    if selected_room in ['LivingRoom', 'Bedroom', 'Kitchen']:
+        sensor_list += ["Wind_Speed", "Light_Intensity"]
+
+    selected_sensors = st.multiselect("Choose Sensors", sensor_list, default=sensor_list[:3])
+
+    # -----------------------------
+    # Time Grouping for Charts
     # -----------------------------
     df_filtered['GroupKey'] = df_filtered['AC_Timestamp']
     if time_group == "Daily":
@@ -85,23 +90,25 @@ def main():
     chart_df = df_filtered.groupby('GroupKey').agg(agg_dict).reset_index()
 
     # -----------------------------
-    # Charts
+    # Line Charts for Selected Sensors
     # -----------------------------
-    st.subheader(f"📈 {selected_room} Sensor Trends - {time_group}")
+    st.subheader(f"📊 {selected_room} Sensor Trends - {time_group}")
     for sensor in selected_sensors:
         col_name = f"{selected_room}_{sensor}" if sensor != "Energy_Consumption" else sensor
-        fig = px.line(chart_df, x='GroupKey', y=col_name, title=f"{sensor.replace('_', ' ')} Over Time", markers=True)
+        fig = px.line(chart_df, x='GroupKey', y=col_name,
+                      title=f"{sensor.replace('_', ' ')} Over Time", markers=True)
         st.plotly_chart(fig, use_container_width=True)
 
     # -----------------------------
-    # Appliance Details (only for some rooms)
+    # Appliance Details
     # -----------------------------
     if selected_room in ['LivingRoom', 'Bedroom', 'Kitchen']:
         st.subheader("🛋️ Appliance Info")
-        st.markdown("✅ **Fan:** Present\n\n✅ **Light:** Present")
+        st.markdown("✅ **Fan:** Present")
+        st.markdown("✅ **Light:** Present")
 
     # -----------------------------
-    # Download Filtered Data
+    # Download Button
     # -----------------------------
     st.subheader("⬇️ Download Filtered Data")
     buffer = BytesIO()
