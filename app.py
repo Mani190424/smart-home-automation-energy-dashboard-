@@ -1,129 +1,117 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 from datetime import datetime
+from io import BytesIO
 
-# --------- Authentication ---------
+# --------------------- LOGIN SYSTEM ---------------------------
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.login_time = None
+
 def login():
-    if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
-
-    if not st.session_state.logged_in:
-        st.title("🔐 Smart Home Login")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            if username == "admin" and password == "1234":
-                st.session_state.logged_in = True
-                st.session_state.login_time = datetime.now()
-                st.success(f"Welcome, {username}!")
-            else:
-                st.error("Invalid credentials")
-        st.stop()
+    st.title("🔐 Smart Home Energy Dashboard Login")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if username == "admin" and password == "1234":
+            st.session_state.logged_in = True
+            st.session_state.login_time = datetime.now()
+            st.success("Login successful!")
+            st.rerun()
+        else:
+            st.error("Incorrect username or password")
 
 def logout():
-    st.session_state.logged_in = False
-    st.experimental_rerun()
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state.logged_in = False
+        st.success("Logged out successfully!")
+        st.rerun()
 
-login()
-
-# --------- Sidebar ---------
-st.sidebar.title("🧾 Filter Options")
-
-# Load data
-@st.cache_data
+# --------------------- MAIN DASHBOARD ---------------------------
 def load_data():
     df = pd.read_csv("processed_with_ac_timestamp(Sheet1).csv")
-    df.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-    df["Date"] = pd.to_datetime(df["Date"])
+    if "Date" not in df.columns:
+        df["Date"] = pd.date_range(start="2024-01-01", periods=len(df), freq="6H")
+    df["Date"] = pd.to_datetime(df["AC_Timestamp"], errors='coerce')
+    df.dropna(subset=["Date"], inplace=True)
     return df
 
-df = load_data()
+def main():
+    st.set_page_config(page_title="Smart Home Dashboard", layout="wide")
+    st.sidebar.title("🗂️ Filter Options")
 
-# From-To Date Filter
-min_date, max_date = df["Date"].min(), df["Date"].max()
-from_date = st.sidebar.date_input("From", min_value=min_date, max_value=max_date, value=min_date)
-to_date = st.sidebar.date_input("To", min_value=min_date, max_value=max_date, value=max_date)
+    logout()  # Logout button in sidebar
 
-# Room selection
-rooms = ["LivingRoom", "Kitchen", "Bedroom"]
-selected_rooms = st.sidebar.multiselect("Select Rooms", rooms, default=rooms)
+    df = load_data()
 
-# Theme
-theme = st.sidebar.radio("Theme", ["🌞 Light", "🌙 Dark"])
-st.markdown(
-    f"""<style>
-        body {{ background-color: {'#0e1117' if theme == "🌙 Dark" else '#ffffff'}; }}
-    </style>""",
-    unsafe_allow_html=True,
-)
+    min_date = df["Date"].min().date()
+    max_date = df["Date"].max().date()
 
-# Logout button
-if st.sidebar.button("Logout"):
-    logout()
+    from_date = st.sidebar.date_input("From", min_value=min_date, max_value=max_date, value=min_date)
+    to_date = st.sidebar.date_input("To", min_value=min_date, max_value=max_date, value=max_date)
 
-# Filter data
-filtered_df = df[(df["Date"].dt.date >= from_date) & (df["Date"].dt.date <= to_date)]
+    if from_date > to_date:
+        st.warning("⚠️ From date is greater than To date.")
+        return
 
-# KPI Calculations
-energy = filtered_df["Energy_Consumption"].sum()
-temp_cols = [f"Temperature_{room}" for room in selected_rooms]
-humidity_cols = [f"Humidity_{room}" for room in selected_rooms]
+    df_filtered = df[(df["Date"].dt.date >= from_date) & (df["Date"].dt.date <= to_date)]
 
-avg_temp = filtered_df[temp_cols].mean().mean() if temp_cols else 0
-avg_humidity = filtered_df[humidity_cols].mean().mean() if humidity_cols else 0
+    rooms = {
+        "Bathroom": "🛁",
+        "Bedroom": "🛏️",
+        "Hall": "🛋️",
+        "Kitchen": "🍽️",
+        "Living Room": "🖥️"
+    }
 
-# --------- MAIN ---------
-st.title("🏠 Smart Home Energy Dashboard")
+    selected_room = st.selectbox("🏠 Select Room", list(rooms.keys()), index=0, format_func=lambda x: f"{rooms[x]} {x}")
 
-st.markdown(f"""
-<style>
-.kpi-card {{
-    padding: 1rem;
-    border-radius: 1rem;
-    background-color: #262730;
-    text-align: center;
-    color: white;
-    font-size: 1.3rem;
-    margin-bottom: 1rem;
-}}
-</style>
-""", unsafe_allow_html=True)
+    st.markdown(f"## {rooms[selected_room]} {selected_room}")
 
-# KPI Cards
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.markdown(f"<div class='kpi-card'>⚡ Total Energy<br><b>{energy:.1f} kWh</b></div>", unsafe_allow_html=True)
-with col2:
-    st.markdown(f"<div class='kpi-card'>🌡️ Avg Temp<br><b>{avg_temp:.1f} °C</b></div>", unsafe_allow_html=True)
-with col3:
-    st.markdown(f"<div class='kpi-card'>💧 Avg Humidity<br><b>{avg_humidity:.1f} %</b></div>", unsafe_allow_html=True)
+    # ----------- KPI Cards -------------
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        total_energy = df_filtered["Energy_Consumption"].sum()
+        st.metric("⚡ Total Energy", f"{total_energy:.1f} kWh")
 
-# Chart: Power Usage Over Time
-st.subheader("📈 Power Usage Over Time")
-st.line_chart(filtered_df.set_index("Date")["Energy_Consumption"])
+    with col2:
+        avg_temp = df_filtered[[col for col in df_filtered.columns if "Temperature" in col and selected_room.lower() in col.lower()]].mean().values[0]
+        st.metric("🌡️ Avg Temp", f"{avg_temp:.1f} °C")
 
-# Bar Chart: Power by Room
-st.subheader("📊 Power Consumption by Room")
-room_energy = {room: filtered_df[f"Temperature_{room}"].sum() for room in selected_rooms if f"Temperature_{room}" in df.columns}
-room_df = pd.DataFrame(list(room_energy.items()), columns=["Room", "Total Power"])
-fig_bar = px.bar(room_df, x="Room", y="Total Power", color="Room", title="Power Usage by Room")
-st.plotly_chart(fig_bar)
+    with col3:
+        avg_hum = df_filtered[[col for col in df_filtered.columns if "Humidity" in col and selected_room.lower() in col.lower()]].mean().values[0]
+        st.metric("💧 Avg Humidity", f"{avg_hum:.1f} %")
 
-# Pie Chart: Room %
-st.subheader("🥧 Energy Usage Distribution")
-fig_pie = px.pie(room_df, names="Room", values="Total Power", title="Power % by Room")
-st.plotly_chart(fig_pie)
+    # ----------- Charts Section -------------
+    chart_type = st.selectbox("📊 Select Chart Type", ["Line Chart", "Bar Chart", "Pie Chart"])
 
-# Download
-st.subheader("⬇️ Download Filtered Data")
-col_csv, col_excel = st.columns(2)
-with col_csv:
-    st.download_button("Download CSV", data=filtered_df.to_csv(index=False), file_name="filtered_data.csv")
-with col_excel:
-    st.download_button("Download Excel", data=filtered_df.to_excel(index=False), file_name="filtered_data.xlsx")
+    if chart_type == "Line Chart":
+        st.line_chart(df_filtered[["Date", "Energy_Consumption"]].set_index("Date"))
 
-# Track login time
-if "login_time" in st.session_state:
-    st.sidebar.caption(f"🕒 Logged in at: {st.session_state.login_time.strftime('%H:%M:%S')}")
+    elif chart_type == "Bar Chart":
+        room_cols = [col for col in df_filtered.columns if "Energy_Consumption" in col or "Room" in col]
+        df_bar = df_filtered.groupby(df_filtered["Date"].dt.date)["Energy_Consumption"].sum()
+        st.bar_chart(df_bar)
 
+    elif chart_type == "Pie Chart":
+        room_cols = [col for col in df_filtered.columns if "Energy_Consumption" in col]
+        df_pie = df_filtered.groupby(selected_room)["Energy_Consumption"].sum()
+        st.write("💡 Pie chart placeholder (custom room-wise % coming soon...)")
+
+    # ----------- Download Buttons -------------
+    buffer = BytesIO()
+    df_filtered.to_excel(buffer, index=False, engine='openpyxl')
+    buffer.seek(0)
+
+    st.sidebar.download_button("📥 Download Excel", data=buffer, file_name="filtered_data.xlsx", mime="application/vnd.ms-excel")
+    st.sidebar.download_button("📥 Download CSV", data=df_filtered.to_csv(index=False), file_name="filtered_data.csv", mime="text/csv")
+
+    # ----------- Footer ----------
+    st.markdown("---")
+    st.caption(f"🕒 Logged in at: {st.session_state.login_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+# ---------------- MAIN CALL ----------------------
+if not st.session_state.logged_in:
+    login()
+else:
+    main()
