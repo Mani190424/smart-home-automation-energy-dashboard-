@@ -97,7 +97,7 @@ rooms = {
         "Living Room": "🖥️"
     }
 
-    selected_room = st.selectbox("🏠 Select Room", list(rooms.keys()), index=0, format_func=lambda x: f"{rooms[x]} {x}")
+selected_room = st.selectbox("🏠 Select Room", list(rooms.keys()), index=0, format_func=lambda x: f"{rooms[x]} {x}")
 
     st.markdown(f"## {rooms[selected_room]} {selected_room}")
 
