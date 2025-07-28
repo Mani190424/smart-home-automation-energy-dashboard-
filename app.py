@@ -69,7 +69,7 @@ def main():
     st.markdown(f"## {rooms[selected_room]} {selected_room}")
 
     # ----------- KPI Cards -------------
-      col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         total_energy = df_filtered["Energy_Consumption"].sum()
