@@ -1,103 +1,119 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import plotly.express as px
+from io import BytesIO
+from datetime import datetime
 
-# ----- CONFIG -----
 st.set_page_config(page_title="Smart Home Dashboard", layout="wide")
-VALID_USERS = ["data.analyst190124@gmail.com"]
 
-# ----- LOAD DATA -----
+# -----------------------------
+# Load Data
+# -----------------------------
 @st.cache_data
+
 def load_data():
     df = pd.read_csv("processed_with_ac_timestamp(Sheet1).csv")
     df['AC_Timestamp'] = pd.to_datetime(df['AC_Timestamp'])
     return df
 
-# ----- LOGIN -----
-def login():
-    st.title("🔐 Smart Home Login")
-    email = st.text_input("Enter your email to login")
-    if st.button("Login"):
-        if email in VALID_USERS:
-            st.session_state["authenticated"] = True
-            st.session_state["email"] = email
-            st.session_state["login_time"] = datetime.now()
-            st.experimental_rerun()
-        else:
-            st.error("Unauthorized user!")
-
-# ----- MAIN DASHBOARD -----
+# -----------------------------
+# MAIN APP
+# -----------------------------
 def main():
+    st.title("🏠 Smart Home Energy Dashboard")
+
     df = load_data()
 
+    # -----------------------------
     # Sidebar Filters
-    st.sidebar.title("🏠 Filter Options")
-    selected_room = st.sidebar.selectbox("Select Room", ["LivingRoom", "Bedroom", "Kitchen"])
-    date_range = st.sidebar.date_input("Select Date Range", [df["AC_Timestamp"].min().date(), df["AC_Timestamp"].max().date()])
-    time_group = st.sidebar.radio("Group by Time", ["Daily", "Weekly", "Monthly", "Yearly"])
+    # -----------------------------
+    st.sidebar.header("📊 Filters")
+    min_date = df['AC_Timestamp'].min().date()
+    max_date = df['AC_Timestamp'].max().date()
+    start_date, end_date = st.sidebar.date_input("📅 Select Date Range", [min_date, max_date], min_value=min_date, max_value=max_date)
 
-    # Filter data
-    df_filtered = df[
-        (df["AC_Timestamp"].dt.date >= date_range[0]) &
-        (df["AC_Timestamp"].dt.date <= date_range[1])
-    ]
+    time_group = st.sidebar.selectbox("🕒 Group By", ["Daily", "Weekly", "Monthly", "Yearly"])
 
-    # Room-specific columns
-    temp_col = f"Temperature_{selected_room}"
-    hum_col = f"Humidity_{selected_room}"
-    energy_col = "Energy_Consumption"
+    room_list = ['LivingRoom', 'Bedroom', 'Outdoor', 'Kitchen']
+    selected_room = st.sidebar.selectbox("📍 Select Room", room_list)
 
-    st.title(f"📊 Smart Home Dashboard - {selected_room}")
+    sensor_list = ["Temperature", "Humidity", "Energy_Consumption"]
+    if selected_room in ['LivingRoom', 'Bedroom', 'Kitchen']:
+        sensor_list += ["Wind_Speed", "Light_Intensity"]
 
-    # KPI Cards
+    selected_sensors = st.sidebar.multiselect("📈 Select Sensors", sensor_list, default=sensor_list[:3])
+
+    # -----------------------------
+    # Data Filtering
+    # -----------------------------
+    df_filtered = df[(df['AC_Timestamp'].dt.date >= start_date) & (df['AC_Timestamp'].dt.date <= end_date)]
+
+    # -----------------------------
+    # KPI Columns
+    # -----------------------------
+    temp_col = f"{selected_room}_Temperature"
+    hum_col = f"{selected_room}_Humidity"
+
+    st.subheader(f"🛠️ Room: {selected_room}")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("🌡️ Avg Temp (°C)", f"{df_filtered[temp_col].mean():.2f}")
-    col2.metric("🌡️ Max Temp (°C)", f"{df_filtered[temp_col].max():.2f}")
-    col3.metric("🌡️ Min Temp (°C)", f"{df_filtered[temp_col].min():.2f}")
-    col4.metric("⚡ Total Energy (kWh)", f"{df_filtered[energy_col].sum():.2f}")
+    with col1:
+        st.metric("🌡️ Avg Temp (°C)", f"{df_filtered[temp_col].mean():.2f}")
+    with col2:
+        st.metric("🌡️ Max Temp (°C)", f"{df_filtered[temp_col].max():.2f}")
+    with col3:
+        st.metric("💧 Avg Humidity (%)", f"{df_filtered[hum_col].mean():.2f}")
+    with col4:
+        st.metric("⚡ Total Energy (kWh)", f"{df_filtered['Energy_Consumption'].sum():.2f}")
 
-    # Grouping
+    # -----------------------------
+    # Time Grouping
+    # -----------------------------
+    df_filtered['GroupKey'] = df_filtered['AC_Timestamp']
     if time_group == "Daily":
-        df_filtered["Group"] = df_filtered["AC_Timestamp"].dt.date
+        df_filtered['GroupKey'] = df_filtered['AC_Timestamp'].dt.date
     elif time_group == "Weekly":
-        df_filtered["Group"] = df_filtered["AC_Timestamp"].dt.to_period("W").astype(str)
+        df_filtered['GroupKey'] = df_filtered['AC_Timestamp'].dt.to_period("W").apply(lambda r: r.start_time)
     elif time_group == "Monthly":
-        df_filtered["Group"] = df_filtered["AC_Timestamp"].dt.to_period("M").astype(str)
+        df_filtered['GroupKey'] = df_filtered['AC_Timestamp'].dt.to_period("M").dt.to_timestamp()
     elif time_group == "Yearly":
-        df_filtered["Group"] = df_filtered["AC_Timestamp"].dt.to_period("Y").astype(str)
+        df_filtered['GroupKey'] = df_filtered['AC_Timestamp'].dt.to_period("Y").dt.to_timestamp()
 
+    agg_dict = {}
+    for sensor in selected_sensors:
+        col_name = f"{selected_room}_{sensor}" if sensor != "Energy_Consumption" else sensor
+        agg_dict[col_name] = "mean" if sensor != "Energy_Consumption" else "sum"
+
+    chart_df = df_filtered.groupby('GroupKey').agg(agg_dict).reset_index()
+
+    # -----------------------------
     # Charts
-    st.subheader("📈 Temperature Over Time")
-    fig_temp = px.line(df_filtered, x="AC_Timestamp", y=temp_col, title="Temperature Trend", markers=True)
-    st.plotly_chart(fig_temp, use_container_width=True)
+    # -----------------------------
+    st.subheader(f"📈 {selected_room} Sensor Trends - {time_group}")
+    for sensor in selected_sensors:
+        col_name = f"{selected_room}_{sensor}" if sensor != "Energy_Consumption" else sensor
+        fig = px.line(chart_df, x='GroupKey', y=col_name, title=f"{sensor.replace('_', ' ')} Over Time", markers=True)
+        st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("💧 Humidity Over Time")
-    fig_hum = px.line(df_filtered, x="AC_Timestamp", y=hum_col, title="Humidity Trend", markers=True)
-    st.plotly_chart(fig_hum, use_container_width=True)
+    # -----------------------------
+    # Appliance Details (only for some rooms)
+    # -----------------------------
+    if selected_room in ['LivingRoom', 'Bedroom', 'Kitchen']:
+        st.subheader("🛋️ Appliance Info")
+        st.markdown("✅ **Fan:** Present\n\n✅ **Light:** Present")
 
-    st.subheader("⚡ Energy Consumption Over Time")
-    fig_energy = px.line(df_filtered, x="AC_Timestamp", y=energy_col, title="Energy Usage", markers=True)
-    st.plotly_chart(fig_energy, use_container_width=True)
-
-    # Export Button
-    st.subheader("📁 Download Data")
-    download_df = df_filtered[["AC_Timestamp", temp_col, hum_col, energy_col]]
+    # -----------------------------
+    # Download Filtered Data
+    # -----------------------------
+    st.subheader("⬇️ Download Filtered Data")
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df_filtered.to_excel(writer, index=False, sheet_name="FilteredData")
     st.download_button(
-        label="Download as Excel",
-        data=download_df.to_excel(index=False, engine='openpyxl'),
-        file_name=f"{selected_room}_data.xlsx",
+        label="📥 Download Excel",
+        data=buffer.getvalue(),
+        file_name="Smart_Home_Filtered.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-# ----- LOGIC ENTRY -----
-if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
-    login()
-else:
+if __name__ == '__main__':
     main()
-    st.sidebar.markdown("---")
-    st.sidebar.write(f"✅ Logged in as: {st.session_state['email']}")
-    st.sidebar.write(f"🕒 Login Time: {st.session_state['login_time'].strftime('%Y-%m-%d %H:%M:%S')}")
-    if st.sidebar.button("Logout"):
-        st.session_state.clear()
-        st.experimental_rerun()
