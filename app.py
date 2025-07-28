@@ -17,16 +17,20 @@ def logout():
 # --------------------- LOAD DATA ---------------------
 @st.cache_data
 def load_data():
-    df = pd.read_excel("processed_with_ac_timestamp(Sheet1).csv")
-    df.rename(columns=lambda x: x.strip(), inplace=True)
-    df['AC_Timestamp'] = pd.to_datetime(df['AC_Timestamp'], errors='coerce')
-    df.dropna(subset=['AC_Timestamp'], inplace=True)
-    df['Date'] = df['AC_Timestamp'].dt.date
-    df['Year'] = df['AC_Timestamp'].dt.year
-    df['Month'] = df['AC_Timestamp'].dt.month
-    df['Week'] = df['AC_Timestamp'].dt.strftime('%Y-%U')
-    df['Day'] = df['AC_Timestamp'].dt.strftime('%Y-%m-%d')
-    return df
+    try:
+        df = pd.read_csv("processed_with_ac_timestamp(Sheet1).csv")
+        df.rename(columns=lambda x: x.strip(), inplace=True)
+        df['AC_Timestamp'] = pd.to_datetime(df['AC_Timestamp'], errors='coerce')
+        df.dropna(subset=['AC_Timestamp'], inplace=True)
+        df['Date'] = df['AC_Timestamp'].dt.date
+        df['Year'] = df['AC_Timestamp'].dt.year
+        df['Month'] = df['AC_Timestamp'].dt.month
+        df['Week'] = df['AC_Timestamp'].dt.strftime('%Y-%U')
+        df['Day'] = df['AC_Timestamp'].dt.strftime('%Y-%m-%d')
+        return df
+    except FileNotFoundError:
+        st.error("🚫 CSV file not found. Please check the file name.")
+        return pd.DataFrame()
 
 # --------------------- MAIN APP ---------------------
 def main():
