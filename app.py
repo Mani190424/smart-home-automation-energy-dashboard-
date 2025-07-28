@@ -89,7 +89,7 @@ df_filtered = df[(df["Date"] >= pd.to_datetime(start_date)) & (df["Date"] <= pd.
 
 df_filtered = df[(df["Date"].dt.date >= from_date) & (df["Date"].dt.date <= to_date)]
 
-    rooms = {
+rooms = {
         "Bathroom": "🛁",
         "Bedroom": "🛏️",
         "Hall": "🛋️",
