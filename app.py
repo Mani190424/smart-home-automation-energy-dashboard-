@@ -87,7 +87,7 @@ start_date, end_date = st.sidebar.date_input("Select Date Range", [df["Date"].mi
 df_filtered = df[(df["Date"] >= pd.to_datetime(start_date)) & (df["Date"] <= pd.to_datetime(end_date))]
 
 
-    df_filtered = df[(df["Date"].dt.date >= from_date) & (df["Date"].dt.date <= to_date)]
+df_filtered = df[(df["Date"].dt.date >= from_date) & (df["Date"].dt.date <= to_date)]
 
     rooms = {
         "Bathroom": "🛁",
