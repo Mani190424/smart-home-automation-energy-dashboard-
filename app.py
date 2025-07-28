@@ -2,262 +2,195 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime
-import os
 
-# === USER AUTHENTICATION FROM CSV ===
-USERS_FILE = "users.csv"
-users_path = os.path.join(os.path.dirname(__file__), USERS_FILE)
-users_df = pd.read_csv(users_path)
+# ---------------- USER PROFILE HANDLING ----------------
+st.sidebar.header("👤 User Profile")
 
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-    st.session_state.email = ""
+if "user_profile" not in st.session_state:
+    st.session_state.user_profile = {
+        "name": "",
+        "email": "",
+        "mobile": "",
+        "image": None,
+        "submitted": False
+    }
 
-if not st.session_state.authenticated:
-    st.markdown("""
-        <h2 style='text-align:center;'>🔐 Login Required</h2>
-        <p style='text-align:center;'>Enter your email and password to access the dashboard.</p>
-    """, unsafe_allow_html=True)
+profile = st.session_state.user_profile
 
-    email = st.text_input("Email")
-    password = st.text_input("Password", type="password")
-    col1, col2 = st.columns([1, 2])
+if not profile["submitted"]:
+    name = st.sidebar.text_input("Name", value=profile["name"])
+    email = st.sidebar.text_input("Email", value=profile["email"])
+    mobile = st.sidebar.text_input("Mobile", value=profile["mobile"])
+    image = st.sidebar.file_uploader("Upload Profile Pic", type=["png", "jpg"])
 
-    with col1:
-        login = st.button("Login")
-    with col2:
-        forgot = st.button("❓ Forgot Password?")
-
-    if login:
-        user = users_df[(users_df['email'] == email) & (users_df['password'] == password)]
-        if not user.empty:
-            st.session_state.authenticated = True
-            st.session_state.email = email
-            st.success("✅ Login successful")
+    if st.sidebar.button("✅ Save Profile"):
+        if name and email and mobile and image:
+            profile["name"] = name
+            profile["email"] = email
+            profile["mobile"] = mobile
+            profile["image"] = image
+            profile["submitted"] = True
+            st.session_state.user_profile = profile
             st.rerun()
         else:
-            st.error("❌ Invalid email or password")
+            st.sidebar.warning("Please fill all fields and upload a profile picture.")
+else:
+    with st.sidebar.expander("📄 Profile Summary", expanded=True):
+        st.image(profile["image"], width=100)
+        st.markdown(f"**Name:** {profile['name']}")
+        st.markdown(f"**Email:** {profile['email']}")
+        st.markdown(f"**Mobile:** {profile['mobile']}")
 
-    if forgot:
-        with st.expander("📩 Reset your password"):
-            user_email = st.text_input("Enter your registered email")
-            if st.button("Send Reset Link"):
-                if user_email in users_df.email.values:
-                    st.success(f"✅ Reset link sent to {user_email} (simulated)")
-                else:
-                    st.warning("⚠️ Email not found in user list")
+    if st.sidebar.button("✏️ Edit Profile"):
+        profile["submitted"] = False
+        st.session_state.user_profile = profile
+        st.rerun()
 
-    st.stop()
-    
-# Page Config
-st.set_page_config(
-    page_title="Smart Home Dashboard",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    page_icon="🏡"
-)
+# -------------- Theme Toggle --------------
+theme = st.sidebar.radio("🎨 Theme", ["🌞 Light", "🌙 Dark"])
+primary_color = "#000000" if theme == "🌞 Light" else "#fca6bc"
+bg_color = "#dda0dd" if theme == "🌞 Light" else "#0E1117"
+font_color = "#000000" if theme == "🌞 Light" else "#fca6bc"
+st.markdown(f"""
+    <style>
+        .stApp {{
+            background-color: {bg_color};
+            color: {font_color};
+        }}
+    </style>
+""", unsafe_allow_html=True)
 
-# Load Data
+st.title("🏠 Smart Home Energy Dashboard")
+
+# Load data
+@st.cache_data
 def load_data():
-    df = pd.read_csv("processed_with_ac_timestamp(Sheet1).csv")
-    df["AC_Timestamp"] = pd.to_datetime(df["AC_Timestamp"])
-    df["Date"] = df["AC_Timestamp"].dt.date
-    df["Time"] = df["AC_Timestamp"].dt.time
+    url = "https://raw.githubusercontent.com/Mani190424/smart-home-data/refs/heads/main/Smart_Automation_Home_System_in.csv"
+    df = pd.read_csv(url)
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    df.dropna(subset=['Date'], inplace=True)
+    df['Month'] = df['Date'].dt.to_period("M").astype(str)
+    df['Week'] = df['Date'].dt.strftime('%Y-%U')
+    df['Year'] = df['Date'].dt.year
     return df
 
 df = load_data()
 
-import os
-
-# === USER PROFILE ===
-USER_PROFILE_FILE = "user_profiles.csv"
-
-with st.sidebar.expander("👤 My Profile", expanded=True):
-    if os.path.exists(USER_PROFILE_FILE):
-        try:
-            existing_df = pd.read_csv(USER_PROFILE_FILE)
-            if not existing_df.empty:
-                latest_user = existing_df.iloc[-1]
-                st.subheader(latest_user["Username"])
-                st.markdown(f"📧 {latest_user['Email']}")
-                st.markdown(f"📱 {latest_user['Mobile']}")
-                if st.button("✏️ Edit Profile"):
-                    st.session_state["edit_profile"] = True
-            else:
-                st.session_state["edit_profile"] = True
-        except Exception as e:
-            st.warning("Error reading profile file.")
-            st.session_state["edit_profile"] = True
-    else:
-        st.session_state["edit_profile"] = True
-
-    if st.session_state.get("edit_profile", False):
-        with st.form("profile_form"):
-            username = st.text_input("Username")
-            email = st.text_input("Email")
-            mobile = st.text_input("Mobile Number")
-            submitted = st.form_submit_button("💾 Save Profile")
-
-            if submitted:
-                profile_df = pd.DataFrame([{"Username": username, "Email": email, "Mobile": mobile}])
-                if os.path.exists(USER_PROFILE_FILE):
-                    existing_df = pd.read_csv(USER_PROFILE_FILE)
-                    combined_df = pd.concat([existing_df, profile_df], ignore_index=True)
-                    combined_df.drop_duplicates(subset=["Email"], keep="last", inplace=True)
-                else:
-                    combined_df = profile_df
-                combined_df.to_csv(USER_PROFILE_FILE, index=False)
-                st.success(f"✅ Profile Saved: {username} | {email} | {mobile}")
-                st.session_state["edit_profile"] = False
-
-# === SIDEBAR FILTER SECTION ===
-st.sidebar.header("🔍 Filter Data")
-
-min_date = df["AC_Timestamp"].min()
-max_date = df["AC_Timestamp"].max()
-
-selected_dates = st.sidebar.date_input(
-    "📆 Select Date Range",
-    [min_date, max_date],
-    min_value=min_date,
-    max_value=max_date
-)
-
-room_options = ["LivingRoom", "Kitchen", "Bedroom"]
-selected_room = st.sidebar.selectbox("🏡 Select Room", room_options)
-
-aggregation = st.sidebar.radio("📊 Aggregation Level", ["Daily", "Weekly", "Monthly"], index=0)
+# Sidebar - Date Filter and View Toggle
+st.sidebar.header("📅 Filter Options")
+years_range = (2015, 2024)
+start_date = st.sidebar.date_input("From", df["Date"].min().date(), min_value=datetime(years_range[0], 1, 1), max_value=datetime(years_range[1], 12, 31))
+end_date = st.sidebar.date_input("To", df["Date"].max().date(), min_value=datetime(years_range[0], 1, 1), max_value=datetime(years_range[1], 12, 31))
+view_by = st.sidebar.radio("View By", ["Daily", "Weekly", "Monthly", "Yearly"])
 
 # Apply date filter
-if isinstance(selected_dates, list) and len(selected_dates) == 2:
-    df = df[(df["AC_Timestamp"] >= pd.to_datetime(selected_dates[0])) &
-            (df["AC_Timestamp"] <= pd.to_datetime(selected_dates[1]))]
+df = df[(df["Date"] >= pd.to_datetime(start_date)) & (df["Date"] <= pd.to_datetime(end_date))]
 
-# Dynamic column names based on room
-temp_col = f"Temperature_{selected_room}"
-humid_col = f"Humidity_{selected_room}"
+# Room Tab
+rooms = df["Room"].dropna().unique().tolist()
 
-# Header
-st.markdown("""
-    <div style='background-color:#1f4e5f;padding:10px;border-radius:10px;'>
-        <h1 style='text-align: center; color: white;'>🏡 Smart Home Energy Dashboard</h1>
-    </div>
-    <br>
-""", unsafe_allow_html=True)
+if not rooms:
+    st.warning("No room data available for selected date range.")
+    st.stop()
 
-# KPI Cards
-kpi1, kpi2, kpi3 = st.columns(3)
-with kpi1:
-    st.markdown("<div style='background-color:#264653;padding:20px;border-radius:10px;color:white;'>"
-                f"<h4>🌡️ Avg {selected_room} Temp</h4><h2>{df[temp_col].mean():.2f} °C</h2></div>", unsafe_allow_html=True)
-with kpi2:
-    st.markdown("<div style='background-color:#2a9d8f;padding:20px;border-radius:10px;color:white;'>"
-                f"<h4>💧 Avg {selected_room} Humidity</h4><h2>{df[humid_col].mean():.2f} %</h2></div>", unsafe_allow_html=True)
-with kpi3:
-    st.markdown("<div style='background-color:#e76f51;padding:20px;border-radius:10px;color:white;'>"
-                f"<h4>⚡ Total Energy</h4><h2>{df['Energy_Consumption'].sum():.2f} kWh</h2></div>", unsafe_allow_html=True)
+room_tabs = st.tabs(rooms)
 
-st.markdown("---")
+for i, room in enumerate(rooms):
+    with room_tabs[i]:
+        st.markdown(f"## 🚪 {room}")
 
-# ENERGY OVER TIME
-st.subheader("⚡ Energy Over Time")
-energy_chart_type = st.selectbox("Chart Type - Energy", ["Line", "Bar", "Scatter", "Combo"], key="energy")
+        filtered_df = df[df['Room'] == room]
+        room_appliances = sorted(filtered_df['Appliance'].dropna().unique())
+        selected_appliances = st.multiselect("🔌 Select Appliances", options=room_appliances, default=room_appliances, key=f"appliance_{room}")
+        filtered_df = filtered_df[filtered_df['Appliance'].isin(selected_appliances)]
 
-if aggregation == "Daily":
-    df_energy = df.groupby(df["AC_Timestamp"].dt.date).agg({"Energy_Consumption": "sum"}).reset_index()
-    df_energy.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-elif aggregation == "Weekly":
-    df_energy = df.resample("W", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
-    df_energy.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-else:
-    df_energy = df.resample("M", on="AC_Timestamp")["Energy_Consumption"].sum().reset_index()
-    df_energy.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+        if view_by == "Weekly":
+            group_col = "Week"
+        elif view_by == "Monthly":
+            group_col = "Month"
+        elif view_by == "Yearly":
+            group_col = "Year"
+        else:
+            group_col = "Date"
 
-if energy_chart_type == "Line":
-    fig = px.line(df_energy, x="Date", y="Energy_Consumption")
-elif energy_chart_type == "Bar":
-    fig = px.bar(df_energy, x="Date", y="Energy_Consumption")
-elif energy_chart_type == "Scatter":
-    fig = px.scatter(df_energy, x="Date", y="Energy_Consumption")
-elif energy_chart_type == "Combo":
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=df_energy["Date"], y=df_energy["Energy_Consumption"], name="Bar"))
-    fig.add_trace(go.Scatter(x=df_energy["Date"], y=df_energy["Energy_Consumption"], mode='lines+markers', name="Line"))
-else:
-    fig = px.area(df_energy, x="Date", y="Energy_Consumption")
+        grouped = filtered_df.groupby(group_col).agg({
+            "Energy Consumption (kWh)": "sum",
+            "Temperature (°C)": "mean",
+            "Humidity (%)": "mean"
+        }).reset_index()
 
-st.plotly_chart(fig, use_container_width=True)
+        total_energy = filtered_df["Energy Consumption (kWh)"].sum()
+        avg_temp = filtered_df["Temperature (°C)"].mean()
+        avg_humidity = filtered_df["Humidity (%)"].mean()
 
-# TEMPERATURE DISTRIBUTION
-st.subheader("🌡️ Temperature Distribution")
-temp_chart_type = st.selectbox("Chart Type - Temperature", ["Line", "Bar", "Box"], key="temp")
+        def kpi_card(title, value, icon="", unit=""):
+            return f"""
+            <div style="
+                background-color: #262730;
+                padding: 1.2rem;
+                border-radius: 18px;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+                text-align: center;
+                color: white;
+                margin: 0.5rem;
+            ">
+                <h4 style='margin-bottom: 0.2rem;'>{icon} {title}</h4>
+                <h2 style='margin: 0;'>{value}{unit}</h2>
+            </div>
+            """
 
-if aggregation == "Daily":
-    df_temp = df.groupby(df["AC_Timestamp"].dt.date).agg({temp_col: "mean"}).reset_index()
-    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-elif aggregation == "Weekly":
-    df_temp = df.resample("W", on="AC_Timestamp")[temp_col].mean().reset_index()
-    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
-else:
-    df_temp = df.resample("M", on="AC_Timestamp")[temp_col].mean().reset_index()
-    df_temp.rename(columns={"AC_Timestamp": "Date"}, inplace=True)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown(kpi_card("Total Energy", round(total_energy, 2), "⚡", " kWh"), unsafe_allow_html=True)
+        with col2:
+            st.markdown(kpi_card("Avg Temp", round(avg_temp, 1), "🌡", " °C"), unsafe_allow_html=True)
+        with col3:
+            st.markdown(kpi_card("Avg Humidity", round(avg_humidity, 1), "💧", " %"), unsafe_allow_html=True)
 
-if temp_chart_type == "Line":
-    fig = px.line(df_temp, x="Date", y=temp_col)
-elif temp_chart_type == "Bar":
-    fig = px.bar(df_temp, x="Date", y=temp_col)
-elif temp_chart_type == "Box":
-    fig = px.box(df, y=temp_col)
+        st.markdown("---")
+        chart_type = st.selectbox("📊 Select Chart Type", ["Line", "Bar", "Pie", "Donut"], key=f"chart_{room}")
 
-st.plotly_chart(fig, use_container_width=True)
+        st.subheader("⚡ Energy Usage (kWh)")
+        if chart_type == "Line":
+            fig = px.line(grouped, x=group_col, y="Energy Consumption (kWh)")
+        elif chart_type == "Bar":
+            fig = px.bar(grouped, x=group_col, y="Energy Consumption (kWh)")
+        elif chart_type == "Pie":
+            fig = px.pie(grouped, names=group_col, values="Energy Consumption (kWh)")
+        elif chart_type == "Donut":
+            fig = px.pie(grouped, names=group_col, values="Energy Consumption (kWh)", hole=0.4)
+        st.plotly_chart(fig, use_container_width=True)
 
-# HUMIDITY SHARE
-st.subheader("💧 Humidity Share")
-humid_chart_type = st.selectbox("Chart Type - Humidity", ["Pie", "Bar", "Scatter"], key="humid")
+        st.subheader("🌡 Temperature (°C)")
+        if chart_type == "Line":
+            fig2 = px.line(grouped, x=group_col, y="Temperature (°C)")
+        elif chart_type == "Bar":
+            fig2 = px.bar(grouped, x=group_col, y="Temperature (°C)")
+        elif chart_type == "Pie":
+            fig2 = px.pie(grouped, names=group_col, values="Temperature (°C)")
+        elif chart_type == "Donut":
+            fig2 = px.pie(grouped, names=group_col, values="Temperature (°C)", hole=0.4)
+        st.plotly_chart(fig2, use_container_width=True)
 
-if aggregation == "Daily":
-    df_humid = df.groupby(df["AC_Timestamp"].dt.date).agg({humid_col: "mean"}).reset_index()
-elif aggregation == "Weekly":
-    df_humid = df.resample("W", on="AC_Timestamp")[humid_col].mean().reset_index()
-else:
-    df_humid = df.resample("M", on="AC_Timestamp")[humid_col].mean().reset_index()
+        st.subheader("💧 Humidity (%)")
+        if chart_type == "Line":
+            fig3 = px.line(grouped, x=group_col, y="Humidity (%)")
+        elif chart_type == "Bar":
+            fig3 = px.bar(grouped, x=group_col, y="Humidity (%)")
+        elif chart_type == "Pie":
+            fig3 = px.pie(grouped, names=group_col, values="Humidity (%)")
+        elif chart_type == "Donut":
+            fig3 = px.pie(grouped, names=group_col, values="Humidity (%)", hole=0.4)
+        st.plotly_chart(fig3, use_container_width=True)
 
-avg_humidity = df_humid[humid_col].mean()
+# Export Data
+def convert_df(df):
+    return df.to_csv(index=False).encode('utf-8')
 
-if humid_chart_type == "Pie":
-    fig = px.pie(values=[avg_humidity, 100 - avg_humidity], names=[f"Avg {selected_room} Humidity", "Other"])
-elif humid_chart_type == "Bar":
-    fig = px.bar(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
-elif humid_chart_type == "Scatter":
-    fig = px.scatter(x=[humid_col, "Other"], y=[avg_humidity, 100 - avg_humidity])
-st.plotly_chart(fig, use_container_width=True)
-
-# In your sidebar (or top section):
-start_date, end_date = st.sidebar.date_input("📆Select Date Range", value=[df["AC_Timestamp"].min(), df["AC_Timestamp"].max()])
-
-# Convert to datetime
-start_date = pd.to_datetime(start_date)
-end_date = pd.to_datetime(end_date)
-
-# Apply filter
-filtered_df = df[(df["AC_Timestamp"] >= start_date) & (df["AC_Timestamp"] <= end_date)]
-
-# 📊 Preview table of filtered data
-st.markdown("### 🔎 Filtered Data Preview")
-st.write(f"Showing {len(filtered_df)} rows from **{start_date}** to **{end_date}**")
-st.dataframe(filtered_df, use_container_width=True, height=500)
-
-# 📥 Download section
-with st.expander("📩 Download Filtered Report"):
-    csv = filtered_df.to_csv(index=False).encode("utf-8")
-    st.download_button("📥 Download CSV", data=csv, file_name="filtered_report.csv", mime="text/csv")
-
-
-# Table & Download
-st.markdown("---")
-st.dataframe(df[["AC_Timestamp", temp_col, humid_col, "Energy_Consumption"]].tail(10), use_container_width=True)
-
-csv = df.to_csv(index=False).encode("utf-8")
-st.download_button("📩Download Filtered Data", data=csv, file_name="filtered_data.csv", mime="text/csv")
+st.sidebar.download_button(
+    label="📁 Export Filtered Data",
+    data=convert_df(df),
+    file_name='filtered_smart_home_data.csv',
+    mime='text/csv'
+)
