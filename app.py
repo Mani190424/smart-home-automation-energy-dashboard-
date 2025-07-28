@@ -113,11 +113,25 @@ def main():
             k4.metric("❄️ Min Temp", f"{min_temp:.1f} °C")
             k5.metric("💧 Avg Humidity", f"{avg_humidity:.1f} %")
 
-            # Line Chart
+            # ------------------ Charts ------------------
+            # Energy Line Chart
             line_df = room_df.groupby(group_col)["Energy_Consumption"].sum().reset_index()
+            st.write("### ⚡ Energy Consumption Over Time")
             st.line_chart(line_df, x=group_col, y="Energy_Consumption", use_container_width=True)
 
-            # Bar Chart by Room
+            # Temperature Chart
+            if temp_col in room_df.columns:
+                temp_chart = room_df.groupby(group_col)[temp_col].mean().reset_index()
+                st.write("### 🌡️ Temperature Over Time")
+                st.line_chart(temp_chart, x=group_col, y=temp_col, use_container_width=True)
+
+            # Humidity Chart
+            if hum_col in room_df.columns:
+                hum_chart = room_df.groupby(group_col)[hum_col].mean().reset_index()
+                st.write("### 💧 Humidity Over Time")
+                st.line_chart(hum_chart, x=group_col, y=hum_col, use_container_width=True)
+
+            # Bar Chart
             room_power_df = room_df[["Energy_Consumption"]].copy()
             room_power_df["Room"] = room
             st.bar_chart(room_power_df.groupby("Room")["Energy_Consumption"].sum(), use_container_width=True)
