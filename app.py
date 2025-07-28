@@ -50,7 +50,7 @@ st.title("🏠 Smart Home Automation - Energy Dashboard")
 # Load Data
 @st.cache_data
 def load_data():
-    df = pd.read_excel("processed_with_ac_timestamp(Sheet1).csv", sheet_name="Sheet1")
+   df = pd.read_csv("processed_with_ac_timestamp(Sheet1).csv")
     if "Date" not in df.columns:
         df["Date"] = pd.date_range(start="2024-01-01", periods=len(df), freq="6H")
     df["Year"] = df["Date"].dt.year
