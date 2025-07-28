@@ -9,11 +9,9 @@ st.set_page_config(page_title="Smart Home Dashboard", layout="wide")
 # -----------------------------
 # Load Data
 # -----------------------------
-
 @st.cache_data
 def load_data():
-    df = pd.read_csv("processed_with_ac_timestamp(Sheet1).csv")
-    df.columns = df.columns.str.replace(" ", "_")  # ✅ Replace spaces with _
+    df = pd.read_csv("processed_with_ac_timestamp_renamed.csv")
     df['AC_Timestamp'] = pd.to_datetime(df['AC_Timestamp'])
     return df
 
