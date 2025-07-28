@@ -136,13 +136,6 @@ def main():
             room_power_df["Room"] = room
             st.bar_chart(room_power_df.groupby("Room")["Energy_Consumption"].sum(), use_container_width=True)
 
-            # Pie Chart
-            pie_df = room_df.copy()
-            pie_df["Room"] = room
-            pie_data = pie_df.groupby("Room")["Energy_Consumption"].sum()
-            st.write("### ⚙️ Energy Usage Split")
-            st.pyplot(pie_data.plot.pie(autopct='%1.1f%%', figsize=(4, 4)).figure)
-
     # --------------------- DOWNLOAD ---------------------
     st.markdown("---")
     buffer = BytesIO()
