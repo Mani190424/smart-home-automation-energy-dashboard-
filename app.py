@@ -99,7 +99,7 @@ rooms = {
 
 selected_room = st.selectbox("🏠 Select Room", list(rooms.keys()), index=0, format_func=lambda x: f"{rooms[x]} {x}")
 
-    st.markdown(f"## {rooms[selected_room]} {selected_room}")
+st.markdown(f"## {rooms[selected_room]} {selected_room}")
 
     # ----------- KPI Cards -------------
     col1, col2, col3 = st.columns(3)
@@ -116,10 +116,10 @@ selected_room = st.selectbox("🏠 Select Room", list(rooms.keys()), index=0, fo
             "Kitchen": "Kitchen",
             "Living Room": "LivingRoom"
         }
-        keyword = room_keywords[selected_room]
-        temp_cols = [col for col in df_filtered.columns if "Temperature" in col and keyword in col]
-        avg_temp = df_filtered[temp_cols].mean().values[0] if temp_cols else 0
-        st.metric("🌡️ Avg Temp", f"{avg_temp:.1f} °C")
+    keyword = room_keywords[selected_room]
+    temp_cols = [col for col in df_filtered.columns if "Temperature" in col and keyword in col]
+    avg_temp = df_filtered[temp_cols].mean().values[0] if temp_cols else 0
+    st.metric("🌡️ Avg Temp", f"{avg_temp:.1f} °C")
 
     with col3:
         hum_cols = [col for col in df_filtered.columns if "Humidity" in col and keyword in col]
