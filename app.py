@@ -64,8 +64,9 @@ def main():
     st.subheader("📈 Select Sensors to View Trends")
 
     sensor_list = ["Temperature", "Humidity", "Energy_Consumption"]
-    if selected_room in ['LivingRoom', 'Bedroom', 'Kitchen']:
-        sensor_list += ["Wind_Speed", "Light_Intensity"]
+if selected_room in ['Living Room', 'Bedroom', 'Kitchen']:
+    st.metric("💨 Wind Speed", f"{df_filtered['Wind Speed'].mean():.2f} km/h")
+    st.metric("💡 Light Intensity", f"{df_filtered['Light Intensity'].mean():.2f} lux")
 
     selected_sensors = st.multiselect("Choose Sensors", sensor_list, default=sensor_list[:3])
 
