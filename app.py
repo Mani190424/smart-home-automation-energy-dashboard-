@@ -146,9 +146,8 @@ def main():
     # --------------------- DOWNLOAD ---------------------
     st.markdown("---")
     buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-        filtered_df.to_excel(writer, index=False, sheet_name="FilteredData")
-        writer.save()
+   with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+    filtered_df.to_excel(writer, index=False, sheet_name="FilteredData")
     st.download_button("⬇️ Download Filtered Data", data=buffer.getvalue(), file_name="filtered_data.xlsx")
 
 if __name__ == "__main__":
