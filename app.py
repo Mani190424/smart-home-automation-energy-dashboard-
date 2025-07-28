@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import datetime as dt
 from io import BytesIO
+import matplotlib.pyplot as plt
 
-# --------------------- LOGIN ---------------------
+# --------------------- LOGIN FUNCTIONS ---------------------
 def login():
     st.session_state["login_time"] = dt.datetime.now()
     st.session_state["logged_in"] = True
@@ -29,7 +30,7 @@ def load_data():
         df['Day'] = df['AC_Timestamp'].dt.strftime('%Y-%m-%d')
         return df
     except FileNotFoundError:
-        st.error("🚫 CSV file not found. Please check the file name.")
+        st.error("🚫 CSV file not found.")
         return pd.DataFrame()
 
 # --------------------- MAIN APP ---------------------
@@ -37,7 +38,7 @@ def main():
     st.set_page_config("Smart Home Dashboard", layout="wide")
     st.title("🏠 Smart Home Energy Dashboard")
 
-    # Login
+    # --------------------- Login Section ---------------------
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
 
@@ -58,15 +59,17 @@ def main():
             st.experimental_rerun()
 
     df = load_data()
+    if df.empty:
+        return
 
-    # --------------------- FILTERS ---------------------
+    # --------------------- Filters ---------------------
     col1, col2 = st.columns(2)
     with col1:
         date_from = st.date_input("From Date", min(df['Date']))
     with col2:
         date_to = st.date_input("To Date", max(df['Date']))
 
-    filtered_df = df[(df['Date'] >= date_from) & (df['Date'] <= date_to)]
+    df_filtered = df[(df['Date'] >= date_from) & (df['Date'] <= date_to)]
 
     view_by = st.radio("⏱️ View By", ["Daily", "Weekly", "Monthly", "Yearly"], horizontal=True)
     group_col = {
@@ -76,7 +79,7 @@ def main():
         "Yearly": "Year"
     }[view_by]
 
-    # --------------------- ROOM TABS ---------------------
+    # --------------------- Rooms ---------------------
     room_tabs = {
         "🛁 Bathroom": "Bathroom",
         "🛏️ Bedroom": "Bedroom",
@@ -84,10 +87,10 @@ def main():
         "🛋️ LivingRoom": "LivingRoom"
     }
 
-    selected_tab = st.tabs(list(room_tabs.keys()))
-    for idx, room in enumerate(room_tabs.values()):
-        with selected_tab[idx]:
-            room_df = filtered_df.copy()
+    selected_tabs = st.tabs(list(room_tabs.keys()))
+    for i, room in enumerate(room_tabs.values()):
+        with selected_tabs[i]:
+            room_df = df_filtered.copy()
 
             temp_col = f"Temperature_{room}"
             hum_col = f"Humidity_{room}"
@@ -106,6 +109,7 @@ def main():
 
             total_power = room_df["Energy_Consumption"].sum()
 
+            # KPI cards
             k1, k2, k3, k4, k5 = st.columns(5)
             k1.metric("⚡ Total Energy (kWh)", f"{total_power:.2f}")
             k2.metric("🌡️ Avg Temp", f"{avg_temp:.1f} °C")
@@ -113,26 +117,34 @@ def main():
             k4.metric("❄️ Min Temp", f"{min_temp:.1f} °C")
             k5.metric("💧 Avg Humidity", f"{avg_humidity:.1f} %")
 
-            # ------------------ Charts ------------------
-            # Energy Line Chart
-            line_df = room_df.groupby(group_col)["Energy_Consumption"].sum().reset_index()
-            st.write("### ⚡ Energy Consumption Over Time")
-            st.line_chart(line_df, x=group_col, y="Energy_Consumption", use_container_width=True)
+            # Group for charts
+            chart_df = room_df.groupby(group_col).agg({
+                temp_col: "mean",
+                hum_col: "mean",
+                "Energy_Consumption": "sum"
+            }).reset_index()
 
-            # Temperature Chart
-            if temp_col in room_df.columns:
-                temp_chart = room_df.groupby(group_col)[temp_col].mean().reset_index()
-                st.write("### 🌡️ Temperature Over Time")
-                st.line_chart(temp_chart, x=group_col, y=temp_col, use_container_width=True)
+            # Charts
+            st.markdown("#### 📈 Temperature Trend")
+            st.line_chart(chart_df, x=group_col, y=temp_col, use_container_width=True)
 
-            # Humidity Chart
-            if hum_col in room_df.columns:
-                hum_chart = room_df.groupby(group_col)[hum_col].mean().reset_index()
-                st.write("### 💧 Humidity Over Time")
-                st.line_chart(hum_chart, x=group_col, y=hum_col, use_container_width=True)
+            st.markdown("#### 💧 Humidity Trend")
+            st.line_chart(chart_df, x=group_col, y=hum_col, use_container_width=True)
 
-            # Bar Chart
-            room_power_df = room_df[["Energy_Consumption"]].copy()
-            room_power_df["Room"] = room
-            st.bar_chart(room_power_df.groupby("Room")["Energy_Consumption"].sum(), use_container_width=True)
+            st.markdown("#### ⚡ Energy Consumption Trend")
+            st.bar_chart(chart_df, x=group_col, y="Energy_Consumption", use_container_width=True)
 
+    # --------------------- Download Section ---------------------
+    st.markdown("---")
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df_filtered.to_excel(writer, index=False, sheet_name="FilteredData")
+    st.download_button(
+        "⬇️ Download Filtered Data (Excel)",
+        data=buffer.getvalue(),
+        file_name="filtered_data.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+if __name__ == "__main__":
+    main()
