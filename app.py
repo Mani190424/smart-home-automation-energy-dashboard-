@@ -139,7 +139,7 @@ def main():
     # --------------------- DOWNLOAD ---------------------
     st.markdown("---")
     buffer = BytesIO()
-with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
     filtered_df.to_excel(writer, index=False, sheet_name="FilteredData")
     st.download_button("⬇️ Download Filtered Data", data=buffer.getvalue(), file_name="filtered_data.xlsx")
 
