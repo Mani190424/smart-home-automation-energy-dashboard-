@@ -44,15 +44,48 @@ def main():
 
     df = load_data()
 
-    min_date = df["Date"].min().date()
-    max_date = df["Date"].max().date()
+    # 🧠 Convert Timestamp column if not already
+df["Date"] = pd.to_datetime(df["AC_Timestamp"])
+df["Day"] = df["Date"].dt.date
+df["Week"] = df["Date"].dt.isocalendar().week
+df["Month"] = df["Date"].dt.month
+df["Year"] = df["Date"].dt.year
 
-    from_date = st.sidebar.date_input("From", min_value=min_date, max_value=max_date, value=min_date)
-    to_date = st.sidebar.date_input("To", min_value=min_date, max_value=max_date, value=max_date)
+# 📅 Sidebar Filter Section
+st.sidebar.header("📅 Select Time Period")
 
-    if from_date > to_date:
-        st.warning("⚠️ From date is greater than To date.")
-        return
+time_filter = st.sidebar.selectbox("View By", ["Daily", "Weekly", "Monthly", "Yearly"])
+room = st.sidebar.radio("Select Room", list(room_keywords.keys()), index=0)
+
+# 🧠 Create Filtered Data based on time
+if time_filter == "Daily":
+    grouped_df = df.groupby("Day").agg({
+        "Energy_Consumption": "sum"
+    }).reset_index()
+    grouped_df.rename(columns={"Day": "Time"}, inplace=True)
+
+elif time_filter == "Weekly":
+    grouped_df = df.groupby("Week").agg({
+        "Energy_Consumption": "sum"
+    }).reset_index()
+    grouped_df.rename(columns={"Week": "Time"}, inplace=True)
+
+elif time_filter == "Monthly":
+    grouped_df = df.groupby("Month").agg({
+        "Energy_Consumption": "sum"
+    }).reset_index()
+    grouped_df.rename(columns={"Month": "Time"}, inplace=True)
+
+elif time_filter == "Yearly":
+    grouped_df = df.groupby("Year").agg({
+        "Energy_Consumption": "sum"
+    }).reset_index()
+    grouped_df.rename(columns={"Year": "Time"}, inplace=True)
+
+# 🎯 Filter original data (df_filtered) for charts and KPIs
+start_date, end_date = st.sidebar.date_input("Select Date Range", [df["Date"].min(), df["Date"].max()])
+df_filtered = df[(df["Date"] >= pd.to_datetime(start_date)) & (df["Date"] <= pd.to_datetime(end_date))]
+
 
     df_filtered = df[(df["Date"].dt.date >= from_date) & (df["Date"].dt.date <= to_date)]
 
