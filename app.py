@@ -17,7 +17,7 @@ def logout():
 # --------------------- LOAD DATA ---------------------
 @st.cache_data
 def load_data():
-    df = pd.read_excel("processed_smart_home_data.xlsx")
+    df = pd.read_excel("processed_with_ac_timestamp(Sheet1).csv")
     df.rename(columns=lambda x: x.strip(), inplace=True)
     df['AC_Timestamp'] = pd.to_datetime(df['AC_Timestamp'], errors='coerce')
     df.dropna(subset=['AC_Timestamp'], inplace=True)
