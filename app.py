@@ -136,12 +136,3 @@ def main():
             room_power_df["Room"] = room
             st.bar_chart(room_power_df.groupby("Room")["Energy_Consumption"].sum(), use_container_width=True)
 
-    # --------------------- DOWNLOAD ---------------------
-    st.markdown("---")
-    buffer = BytesIO()
-with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-    filtered_df.to_excel(writer, index=False, sheet_name="FilteredData")
-    st.download_button("⬇️ Download Filtered Data", data=buffer.getvalue(), file_name="filtered_data.xlsx")
-
-if __name__ == "__main__":
-    main()
