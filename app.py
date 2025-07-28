@@ -69,17 +69,28 @@ def main():
     st.markdown(f"## {rooms[selected_room]} {selected_room}")
 
     # ----------- KPI Cards -------------
-    col1, col2, col3 = st.columns(3)
+      col1, col2, col3 = st.columns(3)
+
     with col1:
         total_energy = df_filtered["Energy_Consumption"].sum()
         st.metric("⚡ Total Energy", f"{total_energy:.1f} kWh")
 
     with col2:
-        avg_temp = df_filtered[[col for col in df_filtered.columns if "Temperature" in col and selected_room.lower() in col.lower()]].mean().values[0]
+        room_keywords = {
+            "Bathroom": "Bathroom",
+            "Bedroom": "Bedroom",
+            "Hall": "Hall",
+            "Kitchen": "Kitchen",
+            "Living Room": "LivingRoom"
+        }
+        keyword = room_keywords[selected_room]
+        temp_cols = [col for col in df_filtered.columns if "Temperature" in col and keyword in col]
+        avg_temp = df_filtered[temp_cols].mean().values[0] if temp_cols else 0
         st.metric("🌡️ Avg Temp", f"{avg_temp:.1f} °C")
 
     with col3:
-        avg_hum = df_filtered[[col for col in df_filtered.columns if "Humidity" in col and selected_room.lower() in col.lower()]].mean().values[0]
+        hum_cols = [col for col in df_filtered.columns if "Humidity" in col and keyword in col]
+        avg_hum = df_filtered[hum_cols].mean().values[0] if hum_cols else 0
         st.metric("💧 Avg Humidity", f"{avg_hum:.1f} %")
 
     # ----------- Charts Section -------------
